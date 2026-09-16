@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="АвтоТранс — система автоматизации транспортной компании">
+  <title>{{ title or "АвтоТранс" }} — Транспортная компания</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', path='/vendor/leaflet.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+</head>
+<body>
+  <!-- ── Topbar ─────────────────────────────────────────────── -->
+  <header class="topbar">
+    <button class="menu-button" id="nav-toggle" aria-label="Меню" type="button">☰</button>
+    <a class="brand" href="/admin">
+      <span>АТ</span>
+      <strong>АвтоТранс</strong>
+    </a>
+    <nav class="topbar-nav">
+      {% if is_admin %}
+        <a href="/admin" class="topbar-link">Обзор</a>
+        <a href="/admin/orders-intake" class="topbar-link">Заказы</a>
+        <a href="/admin/trips" class="topbar-link">Рейсы</a>
+        <a href="/admin/fleet" class="topbar-link">Грузовики</a>
+        <a href="/admin/drivers" class="topbar-link">Водители</a>
+        <a href="/admin/clients" class="topbar-link">Клиенты</a>
+        <a href="/admin/reports" class="topbar-link">Отчёты</a>
+      {% endif %}
+    </nav>
+    <div class="profile-pill">{{ "Диспетчер" if is_admin else "Гость" }}</div>
+  </header>
+
+  <!-- ── Drawer (боковое меню) ─────────────────────────────── -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="drawer" id="nav-drawer">
+    <div class="drawer-header">
+      <div class="drawer-profile">
+        <span>{{ "Д" if is_admin else "?" }}</span>
+        <div>
+          <strong>{{ "Диспетчер" if is_admin else "Гость" }}</strong>
+          <small>АвтоТранс</small>
+        </div>
+      </div>
+      <button class="drawer-close" id="nav-close" type="button" aria-label="Закрыть">✕</button>
+    </div>
+
+    <nav class="drawer-nav">
+      {% if is_admin %}
+        <a href="/admin">🏠 Панель управления</a>
+        <a href="/admin/orders-intake">📋 Заказы клиентов</a>
+        <a href="/admin/trips">🚛 Рейсы</a>
+        <a href="/admin/fleet">🔧 Грузовики</a>
+        <a href="/admin/drivers">👷 Водители</a>
+        <a href="/admin/clients">🏢 Клиенты</a>
+        <a href="/admin/reports">📊 Отчёты</a>
+      {% endif %}
+    </nav>
+
+    {% if is_admin %}
+      <form action="/logout" method="post" class="drawer-footer">
+        <button type="submit" class="secondary-button" style="width:100%;">⟵ Выйти</button>
+      </form>
+    {% endif %}
+  </aside>
+
+  <!-- ── Main ──────────────────────────────────────────────── -->
+  <main>
+    {% if error %}
+      <div class="alert">{{ error }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ── Нижняя навигация (только мобильные) ──────────────── -->
+  {% if is_admin %}
+  <nav class="mob-nav" id="mob-nav">
+    <a href="/admin"               data-path="/admin"               id="mn-dash">
+      <span class="mn-icon">🏠</span>Обзор
+    </a>
+    <a href="/admin/orders-intake" data-path="/admin/orders-intake" id="mn-orders">
+      <span class="mn-icon">📋</span>Заказы
+    </a>
+    <a href="/admin/trips"         data-path="/admin/trips"         id="mn-trips">
+      <span class="mn-icon">🚛</span>Рейсы
+    </a>
+    <a href="/admin/fleet"         data-path="/admin/fleet"         id="mn-fleet">
+      <span class="mn-icon">🔧</span>Авто
+    </a>
+    <a href="/admin/drivers"       data-path="/admin/drivers"       id="mn-drivers">
+      <span class="mn-icon">👷</span>Водители
+    </a>
+    <a href="/admin/reports"       data-path="/admin/reports"       id="mn-reports">
+      <span class="mn-icon">📊</span>Отчёты
+    </a>
+  </nav>
+  {% endif %}
+
+  <script src="{{ url_for('static', path='/vendor/leaflet.js') }}"></script>
+  <script src="{{ url_for('static', path='/route_calc.js') }}"></script>
+  <script src="{{ url_for('static', path='/app.js') }}"></script>
+  <script type="importmap">{"imports":{"three":"/static/vendor/three.module.js"}}</script>
+  <script type="module" src="{{ url_for('static', path='/truck3d.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+  <script>
+  // ── Drawer: открыть/закрыть только через кнопки ─────────────────
+  (function() {
+    var toggle  = document.getElementById('nav-toggle');
+    var close   = document.getElementById('nav-close');
+    var drawer  = document.getElementById('nav-drawer');
+    var overlay = document.getElementById('drawer-overlay');
+
+    function openDrawer() {
+      drawer.classList.add('is-open');
+      overlay.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeDrawer() {
+      drawer.classList.remove('is-open');
+      overlay.classList.remove('is-open');
+      document.body.style.overflow = '';
+    }
+
+    if (toggle)  toggle.addEventListener('click', openDrawer);
+    if (close)   close.addEventListener('click', closeDrawer);
+    // Клик по оверлею НЕ закрывает — пользователь должен сам нажать ✕ или ☰
+  })();
+
+  // ── Подсветка активной ссылки в topbar и mob-nav ────────────────
+  (function() {
+    var path = window.location.pathname;
+    document.querySelectorAll('.topbar-link, .drawer-nav a, .mob-nav a').forEach(function(a) {
+      var href = a.getAttribute('href');
+      if (!href) return;
+      if (href === path || (path.startsWith(href) && href !== '/admin')) {
+        a.classList.add('active');
+      }
+    });
+  })();
+
+  // ── Автоматическое окрашивание бейджей статусов ─────────────────
+  document.querySelectorAll('.badge').forEach(function(el) {
+    var t = el.textContent.trim();
+    var styles = {
+      'в пути':     ['rgba(210,153,34,.15)', '#d29922',  'rgba(210,153,34,.3)'],
+      'доставлен':  ['rgba(63,185,80,.15)',  '#3fb950',  'rgba(63,185,80,.3)'],
+      'назначен':   ['rgba(47,129,247,.15)', '#2f81f7',  'rgba(47,129,247,.3)'],
+      'новый':      ['rgba(47,129,247,.12)', '#2f81f7',  'rgba(47,129,247,.25)'],
+      'свободна':   ['rgba(63,185,80,.12)',  '#3fb950',  'rgba(63,185,80,.25)'],
+      'свободен':   ['rgba(63,185,80,.12)',  '#3fb950',  'rgba(63,185,80,.25)'],
+      'в рейсе':    ['rgba(210,153,34,.15)', '#d29922',  'rgba(210,153,34,.3)'],
+      'на ТО':      ['rgba(139,148,158,.12)','#8b949e', 'rgba(139,148,158,.25)'],
+      'отдых':      ['rgba(139,148,158,.12)','#8b949e', 'rgba(139,148,158,.25)'],
+    };
+    var key = t.startsWith('рейс #') ? null : t;
+    if (key && styles[key]) {
+      el.style.background  = styles[key][0];
+      el.style.color       = styles[key][1];
+      el.style.border      = '1px solid ' + styles[key][2];
+    } else if (t.startsWith('рейс #')) {
+      el.style.background  = 'rgba(63,185,80,.12)';
+      el.style.color       = '#3fb950';
+      el.style.border      = '1px solid rgba(63,185,80,.25)';
+    }
+  });
+  </script>
+</body>
+</html>

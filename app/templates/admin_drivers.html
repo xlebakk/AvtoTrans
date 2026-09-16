@@ -1,0 +1,92 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+<div class="page-heading">
+  <p class="eyebrow">Персонал</p>
+  <h1>Водители</h1>
+  <p style="margin-top:6px; font-size:13px;">Учёт водительского состава компании</p>
+</div>
+
+<div class="table-card" style="padding:20px; margin-bottom:20px;">
+  <h2 style="margin-bottom:16px;">➕ Добавить водителя</h2>
+  <form action="/ui/drivers" method="post" class="admin-form" style="border:none; padding:0; margin:0; background:transparent;">
+    <input name="full_name" placeholder="ФИО водителя">
+    <select name="license_category" data-category-select>
+      <option value="C, E">C, E — Грузовик с прицепом</option>
+      <option value="C">C — Грузовик</option>
+      <option value="B, C">B, C</option>
+      <option value="__custom__">Другая категория...</option>
+    </select>
+    <input name="license_category_custom" data-category-custom placeholder="Введите категорию" hidden>
+    <input name="experience_years" type="number" min="0" max="70" placeholder="Стаж, лет">
+    <select name="assigned_vehicle_id">
+      <option value="">Без закреплённой машины</option>
+      {% for vehicle in vehicles %}
+        <option value="{{ vehicle.id }}">{{ vehicle.plate_number }} — {{ vehicle.brand }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" style="align-self:end;">Добавить</button>
+  </form>
+</div>
+
+<div class="table-card">
+  <div class="table-overflow">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>ФИО</th>
+          <th>Категория ВУ</th>
+          <th>Стаж</th>
+          <th>Закреплённая машина</th>
+          <th>Статус</th>
+          <th>Портал водителя</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for driver in drivers %}
+          <tr>
+            <td style="color:var(--text-3);font-size:12px;"><strong>#{{ driver.id }}</strong></td>
+            <td><strong>{{ driver.full_name }}</strong></td>
+            <td>
+              <span style="background:var(--accent-dim);color:var(--accent);padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700;">
+                {{ driver.license_category }}
+              </span>
+            </td>
+            <td>{{ driver.experience_years }} лет</td>
+            <td>
+              {% if driver.assigned_vehicle %}
+                <strong>{{ driver.assigned_vehicle.plate_number }}</strong>
+                <small>{{ driver.assigned_vehicle.brand }}</small>
+              {% else %}
+                <span style="color:var(--text-3);">Не назначена</span>
+              {% endif %}
+            </td>
+            <td><span class="badge">{{ driver.status.value }}</span></td>
+            <td>
+              {% if driver.password %}
+                <span style="color:#3fb950;font-size:11px;font-weight:700;">✓ Пароль задан</span>
+                <a href="/driver/login" target="_blank"
+                   style="display:inline-block;margin-left:6px;font-size:10px;color:var(--accent);text-decoration:none;">
+                  🔗 Открыть портал
+                </a>
+              {% else %}
+                <span style="color:var(--text-3);font-size:11px;">Нет доступа</span>
+              {% endif %}
+              <form action="/ui/admin/driver-password/{{ driver.id }}" method="post"
+                    style="display:inline-flex;align-items:center;gap:4px;margin-top:4px;">
+                <input name="password" type="text" placeholder="Задать пароль"
+                       style="width:110px;padding:4px 8px;font-size:11px;height:26px;"
+                       title="Пароль для входа водителя в портал">
+                <button type="submit"
+                        style="padding:4px 8px;font-size:11px;height:26px;background:var(--bg-3);color:var(--text-2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;">
+                  Сохранить
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

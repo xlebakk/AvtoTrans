@@ -1,0 +1,12 @@
+{
+  "client_badge": "Автоматизация транспортной компании",
+  "client_title": "АвтоТранс",
+  "client_description": "Управление грузовиками, водителями, рейсами и финансами",
+  "sections_order": [
+    "contacts",
+    "cargo",
+    "route"
+  ],
+  "show_map": false,
+  "model_mode": "dae"
+}

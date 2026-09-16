@@ -1,0 +1,56 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+<a class="back-link" href="/admin/orders-intake">← К заказам клиентов</a>
+<div class="page-heading">
+  <p class="eyebrow">Диспетчер</p>
+  <h1>Новый заказ на перевозку</h1>
+</div>
+
+<form action="/ui/cargo-requests" method="post" class="admin-form" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; max-width:700px;">
+  <div style="grid-column:1/-1;">
+    <strong>Клиент</strong>
+  </div>
+  <label style="grid-column:1/-1;">Клиент
+    <select name="client_id" required>
+      {% for client in clients %}
+        <option value="{{ client.id }}">{{ client.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <div style="grid-column:1/-1; margin-top:0.5rem;"><strong>Груз</strong></div>
+  <label>Наименование груза
+    <input name="cargo_name" placeholder="Сталь, мебель, цемент...">
+  </label>
+  <label>Особенности
+    <input name="cargo_features" placeholder="Хрупкое, негабарит...">
+  </label>
+  <label>Вес, кг <span style="color:red">*</span>
+    <input name="weight_kg" type="number" min="1" step="0.1" required>
+  </label>
+  <label>Объём, м³
+    <input name="volume_cubic_m" type="number" min="0.1" step="0.1" placeholder="если известен">
+  </label>
+  <label>Длина, м
+    <input name="length_m" type="number" min="0.1" step="0.1">
+  </label>
+  <label>Ширина, м
+    <input name="width_m" type="number" min="0.1" step="0.1">
+  </label>
+  <label>Высота, м
+    <input name="height_m" type="number" min="0.1" step="0.1">
+  </label>
+
+  <div style="grid-column:1/-1; margin-top:0.5rem;"><strong>Маршрут</strong></div>
+  <label>Откуда (пункт отправки) <span style="color:red">*</span>
+    <input name="origin" placeholder="Москва, склад №5" required>
+  </label>
+  <label>Куда (пункт назначения)
+    <input name="destination" placeholder="Санкт-Петербург, порт">
+  </label>
+
+  <div style="grid-column:1/-1; margin-top:1rem;">
+    <button class="primary-button" type="submit">Создать заказ и подобрать машину →</button>
+  </div>
+</form>
+{% endblock %}

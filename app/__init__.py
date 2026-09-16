@@ -1,0 +1,1 @@
+"""Transport company automation application."""

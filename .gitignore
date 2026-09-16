@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Виртуальные окружения
+.venv/
+venv/
+env/
+ENV/
+
+# База данных (локальная)
+*.db
+*.sqlite
+*.sqlite3
+
+# Конфиденциальные данные
+PASSWORDS.txt
+*.env
+.env
+.env.*
+secrets.py
+
+# Документы практики и примеры (не для репо)
+documents/
+primer/
+primer_content.txt
+generate_docs.py
+Автоматизация_грузоперевозок_курсовая.pdf
+
+# 3D модель (слишком большой файл)
+model/
+model.dae
+*.dae
+*.obj
+*.fbx
+
+# IDE и OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Кэш Leaflet/vendor (зависимости, не код проекта)
+# app/static/vendor/ - ВКЛЮЧАЕМ, нужен для работы
+
+# Логи
+*.log
+logs/
+
+# Временные файлы
+*.tmp
+*.bak
+~*

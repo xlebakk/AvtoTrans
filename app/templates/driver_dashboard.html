@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/vendor/leaflet.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117; --bg-2: #161b22; --bg-3: #21262d;
+      --border: #30363d; --text: #e6edf3; --text-2: #c9d1d9; --text-3: #8b949e;
+      --accent: #2f81f7; --accent-dim: rgba(47,129,247,.1);
+      --green: #3fb950; --green-dim: rgba(63,185,80,.1);
+      --yellow: #d29922; --red: #f85149;
+      --radius: 12px; --radius-sm: 8px;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Topbar ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,17,23,.94); backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; gap: 12px;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .topbar-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #1a6ed8);
+      display: grid; place-items: center; font-size: 16px; font-weight: 800; color: #fff;
+      flex-shrink: 0;
+    }
+    .topbar-name { font-weight: 800; font-size: 15px; }
+    .topbar-sub  { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+    .btn {
+      padding: 8px 15px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+      font: 600 12px 'Inter',sans-serif; cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 5px; transition: all .15s;
+      background: var(--bg-3); color: var(--text-2);
+    }
+    .btn:hover { background: var(--bg-2); border-color: var(--text-3); }
+    .btn-danger { background: rgba(248,81,73,.1); color: var(--red); border-color: rgba(248,81,73,.25); }
+    .btn-danger:hover { background: rgba(248,81,73,.2); }
+
+    /* ── Active order banner ── */
+    .active-banner {
+      position: sticky; top: 57px; z-index: 90;
+      background: rgba(47,129,247,.07);
+      border-bottom: 1px solid rgba(47,129,247,.18);
+      padding: 14px 20px;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .banner-icon { font-size: 30px; flex-shrink: 0; }
+    .banner-info { flex: 1; min-width: 200px; }
+    .banner-title { font-size: 15px; font-weight: 800; }
+    .banner-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+    .banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-arrived  { background: rgba(47,129,247,.15); color: var(--accent); border: 1px solid rgba(47,129,247,.3); }
+    .btn-transit  { background: rgba(210,153,34,.15);  color: var(--yellow); border: 1px solid rgba(210,153,34,.3); }
+    .btn-delivered{ background: rgba(63,185,80,.15);   color: var(--green);  border: 1px solid rgba(63,185,80,.3); }
+
+    /* ── Status progress ── */
+    .steps { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+    .step  { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .step-dot {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: grid; place-items: center; font-size: 12px; font-weight: 800;
+      transition: all .2s;
+    }
+    .step-dot.done    { background: var(--green); color: #000; }
+    .step-dot.current { background: var(--accent); color: #fff; box-shadow: 0 0 0 4px rgba(47,129,247,.25); }
+    .step-dot.pending { background: var(--bg-3); color: var(--text-3); border: 1px solid var(--border); }
+    .step-label { font-size: 9px; color: var(--text-3); white-space: nowrap; }
+    .step-line { width: 20px; height: 2px; background: var(--border); margin-bottom: 20px; }
+    .step-line.done { background: var(--green); }
+
+    /* ── Layout ── */
+    .content { max-width: 920px; margin: 0 auto; padding: 20px 16px 80px; }
+
+    .card {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
+    }
+    .card-title { font-weight: 800; font-size: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+    .map-box { height: 300px; border-radius: var(--radius-sm); border: 1px solid var(--border); overflow: hidden; }
+
+    dl.info { display: grid; gap: 0; }
+    dl.info div {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 0; border-bottom: 1px solid rgba(48,54,61,.5);
+    }
+    dl.info div:last-child { border-bottom: none; }
+    dl.info dt { font-size: 12px; color: var(--text-3); }
+    dl.info dd { font-weight: 600; font-size: 13px; text-align: right; max-width: 60%; }
+
+    /* ── Stats grid ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stat-card {
+      background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 14px; text-align: center;
+    }
+    .stat-icon  { font-size: 26px; margin-bottom: 8px; }
+    .stat-value { font-size: 28px; font-weight: 800; line-height: 1; }
+    .stat-label { font-size: 10px; color: var(--text-3); margin-top: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+
+    /* ── Recent trips mini-table ── */
+    .trip-row {
+      display: flex; gap: 10px; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid rgba(48,54,61,.5);
+    }
+    .trip-row:last-child { border-bottom: none; }
+    .trip-num { font-weight: 800; font-size: 12px; color: var(--text-3); width: 26px; flex-shrink: 0; }
+    .trip-route { flex: 1; font-size: 12px; }
+    .trip-route strong { display: block; color: var(--text-2); }
+    .trip-route small  { color: var(--text-3); }
+    .trip-km { font-size: 12px; font-weight: 700; color: var(--green); white-space: nowrap; }
+    .badge {
+      padding: 2px 9px; border-radius: 99px; font-size: 10px; font-weight: 700;
+      border: 1px solid var(--border); background: var(--bg-3); color: var(--text-2); white-space: nowrap;
+    }
+    .badge-green  { background: rgba(63,185,80,.12);  color: var(--green);  border-color: rgba(63,185,80,.3); }
+    .badge-blue   { background: rgba(47,129,247,.12); color: var(--accent); border-color: rgba(47,129,247,.3); }
+    .badge-yellow { background: rgba(210,153,34,.12); color: var(--yellow); border-color: rgba(210,153,34,.3); }
+    .badge-red    { background: rgba(248,81,73,.12);  color: var(--red);    border-color: rgba(248,81,73,.3); }
+
+    /* ── Chat ── */
+    .chat-bubble { border-radius: 12px; padding: 8px 12px; font-size: 13px; max-width: 75%; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════ TOPBAR ════════════ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-avatar">{{ driver.full_name[0] }}</div>
+    <div>
+      <div class="topbar-name">{{ driver.full_name }}</div>
+      <div class="topbar-sub">{{ driver.license_category }} · {{ driver.experience_years }} лет стажа · <span style="color:{% if driver.status.value == 'свободен' %}var(--green){% else %}var(--accent){% endif %}">{{ driver.status.value }}</span></div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <a href="/driver/history" class="btn">📋 История</a>
+    <form action="/driver/logout" method="post" style="display:inline;">
+      <button type="submit" class="btn btn-danger">Выйти</button>
+    </form>
+  </div>
+</header>
+
+<!-- ════════════ ACTIVE ORDER BANNER ════════════ -->
+{% if active_order %}
+{% set o = active_order %}
+<div class="active-banner">
+  <div class="banner-icon">
+    {% if o.status.value == "в пути" %}🛣️
+    {% elif o.status.value == "подъехал" %}📍
+    {% else %}📋{% endif %}
+  </div>
+
+  <div class="banner-info">
+    <div class="banner-title">Рейс #{{ o.id }} · {{ o.cargo_request.cargo_name or "Груз" }}</div>
+    <div class="banner-sub">
+      {{ o.cargo_request.origin }} → {{ o.cargo_request.destination or "—" }}
+      {% if o.departure_time %} · ⏰ Прибыть к {{ o.departure_time }}{% endif %}
+      · {{ "%.0f"|format(o.distance_km) }} км
+    </div>
+  </div>
+
+  <!-- Прогресс статуса -->
+  <div class="steps">
+    {% set steps = [("назначен","📋"),("подъехал","📍"),("в пути","🛣️"),("доставлен","✅")] %}
+    {% set sv = o.status.value %}
+    {% for s_val, s_icon in steps %}
+      {% set is_done = (s_val=="назначен" and sv in ["назначен","подъехал","в пути","доставлен"])
+                    or (s_val=="подъехал" and sv in ["подъехал","в пути","доставлен"])
+                    or (s_val=="в пути"   and sv in ["в пути","доставлен"])
+                    or (s_val=="доставлен" and sv=="доставлен") %}
+      {% set is_cur = s_val == sv %}
+      <div class="step">
+        <div class="step-dot {% if is_cur %}current{% elif is_done %}done{% else %}pending{% endif %}">
+          {{ s_icon if is_cur else ("✓" if is_done else loop.index) }}
+        </div>
+        <div class="step-label">{{ s_val }}</div>
+      </div>
+      {% if not loop.last %}
+        <div class="step-line {% if is_done and not is_cur %}done{% endif %}"></div>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <!-- Кнопки действия -->
+  <div class="banner-actions">
+    {% if o.status.value == "назначен" %}
+      <form action="/ui/driver/status/{{ o.id }}/arrived" method="post">
+        <button type="submit" class="btn btn-arrived" style="font-size:14px;padding:10px 18px;">📍 Подъехал</button>
+      </form>
+    {% elif o.status.value == "подъехал" %}
+      <form action="/ui/driver/status/{{ o.id }}/in_transit" method="post">
+        <button type="submit" class="btn btn-transit" style="font-size:14px;padding:10px 18px;">🚛 Еду</button>
+      </form>
+    {% elif o.status.value == "в пути" %}
+      <form action="/ui/driver/status/{{ o.id }}/delivered" method="post">
+        <button type="submit" class="btn btn-delivered" style="font-size:14px;padding:10px 18px;">✅ Доставил</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ════════════ CONTENT ════════════ -->
+<main class="content">
+
+  <!-- ── Карта (только если есть активный заказ) ── -->
+  {% if active_order %}
+  {% set o = active_order %}
+  <div class="card">
+    <div class="card-title">🗺️ Ваш маршрут</div>
+    <div id="route-map" class="map-box"></div>
+    <div id="route-info" style="margin-top:8px;font-size:12px;color:var(--text-3);text-align:center;">
+      Загрузка маршрута…
+    </div>
+  </div>
+
+  <!-- Детали задания -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-title">📦 Задание</div>
+      <dl class="info">
+        <div><dt>Клиент</dt><dd>{{ o.cargo_request.client.name }}</dd></div>
+        <div><dt>Груз</dt><dd>{{ o.cargo_request.cargo_name or "—" }}</dd></div>
+        <div><dt>Вес</dt><dd>{{ "%.0f"|format(o.cargo_request.weight_kg) }} кг</dd></div>
+        <div><dt>Откуда</dt><dd style="font-size:11px;">{{ o.cargo_request.origin }}</dd></div>
+        <div><dt>Куда</dt><dd style="font-size:11px;">{{ o.cargo_request.destination or "—" }}</dd></div>
+        {% if o.departure_time %}
+        <div><dt>Прибыть к</dt><dd style="color:var(--accent);font-size:16px;font-weight:800;">{{ o.departure_time }}</dd></div>
+        {% endif %}
+      </dl>
+    </div>
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-title">🚛 Грузовик</div>
+      <dl class="info">
+        <div><dt>Марка</dt><dd>{{ o.vehicle.brand }}</dd></div>
+        <div><dt>Гос. номер</dt><dd><code style="background:var(--bg-3);padding:2px 8px;border-radius:4px;font-size:12px;">{{ o.vehicle.plate_number }}</code></dd></div>
+        <div><dt>Расход</dt><dd>{{ "%.1f"|format(o.vehicle.fuel_consumption_per_100km) }} л/100 км</dd></div>
+        <div><dt>Расстояние</dt><dd style="font-size:18px;font-weight:800;color:var(--green);">{{ "%.0f"|format(o.distance_km) }} км</dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <!-- Чат с поддержкой -->
+  <div class="card">
+    <div class="card-title">
+      💬 Чат с поддержкой
+      <span id="unread-badge" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:4px;"></span>
+    </div>
+    <div id="chat-box"
+         style="height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:10px;
+                background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:12px;">
+      <div style="text-align:center;color:var(--text-3);font-size:12px;margin:auto;">Загрузка…</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <input id="chat-input" type="text" placeholder="Написать диспетчеру…"
+             style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font:13px 'Inter',sans-serif;outline:none;transition:border-color .15s;"
+             onfocus="this.style.borderColor='var(--accent)'"
+             onblur="this.style.borderColor='var(--border)'"
+             onkeydown="if(event.key==='Enter')sendMsg()">
+      <button onclick="sendMsg()" class="btn btn-arrived" style="padding:10px 18px;font-size:13px;">Отправить</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ════ СТАТИСТИКА — ВСЕГДА ПОКАЗЫВАЕТСЯ ════ -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">🚛</div>
+      <div class="stat-value" style="color:var(--accent);">{{ stat_trips }}</div>
+      <div class="stat-label">Доставок выполнено</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📍</div>
+      <div class="stat-value" style="color:var(--green);">{{ stat_km | int }}</div>
+      <div class="stat-label">Километров пройдено</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⛽</div>
+      <div class="stat-value" style="color:var(--yellow);">{{ stat_fuel | int }}</div>
+      <div class="stat-label">Расход топлива, ₽</div>
+    </div>
+  </div>
+
+  <!-- ── Последние рейсы ── -->
+  <div class="card">
+    <div class="card-title" style="justify-content:space-between;">
+      <span>📋 Последние рейсы</span>
+      <a href="/driver/history" class="btn" style="font-size:11px;padding:5px 12px;">Все рейсы →</a>
+    </div>
+
+    {% if recent_orders %}
+      {% for o in recent_orders %}
+      <div class="trip-row">
+        <div class="trip-num">#{{ o.id }}</div>
+        <div class="trip-route">
+          <strong>{{ o.cargo_request.cargo_name or "Груз" }} · {{ o.cargo_request.client.name }}</strong>
+          <small>{{ o.cargo_request.origin }} → {{ o.cargo_request.destination or "—" }}</small>
+        </div>
+        <div class="trip-km">{{ "%.0f"|format(o.distance_km) }} км</div>
+        <span class="badge
+          {% if o.status.value == 'доставлен' %}badge-green
+          {% elif o.status.value == 'в пути' %}badge-blue
+          {% elif o.status.value == 'подъехал' %}badge-yellow
+          {% else %}{% endif %}">
+          {{ o.status.value }}
+        </span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="text-align:center;padding:32px;color:var(--text-3);">
+        <div style="font-size:32px;margin-bottom:10px;">😴</div>
+        <div>Рейсов пока нет. Диспетчер назначит задание.</div>
+      </div>
+    {% endif %}
+  </div>
+  <!-- ════ ОБЩИЙ ЧАТ С ПОДДЕРЖКОЙ — показывается ВСЕГДА ════ -->
+  <div class="card" style="border-color:rgba(47,129,247,.2);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <div class="card-title" style="margin-bottom:0;">🎧 Поддержка</div>
+      <span id="general-unread" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;"></span>
+      <span style="font-size:11px;color:var(--text-3);margin-left:auto;">Напишите нам в любое время</span>
+    </div>
+
+    <div id="general-chat-box"
+         style="height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:10px;
+                background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:12px;">
+      <div style="text-align:center;color:var(--text-3);font-size:12px;margin:auto;">Загрузка…</div>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <input id="general-chat-input" type="text" placeholder="Задайте вопрос диспетчеру…"
+             style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font:13px 'Inter',sans-serif;outline:none;transition:border-color .15s;"
+             onfocus="this.style.borderColor='var(--accent)'"
+             onblur="this.style.borderColor='var(--border)'"
+             onkeydown="if(event.key==='Enter')sendGeneralMsg()">
+      <button onclick="sendGeneralMsg()" class="btn btn-arrived" style="padding:10px 18px;font-size:13px;">Отправить</button>
+    </div>
+  </div>
+
+</main>
+
+<script src="/static/vendor/leaflet.js"></script>
+<script src="/static/route_calc.js"></script>
+<script>
+{% if active_order %}
+var ORDER_ID = {{ active_order.id }};
+var ORIGIN   = {{ active_order.cargo_request.origin | tojson }};
+var DEST     = {{ (active_order.cargo_request.destination or '') | tojson }};
+var STATUS   = {{ active_order.status.value | tojson }};
+
+window.addEventListener('DOMContentLoaded', function () {
+  // Карта
+  if (ORIGIN && DEST) {
+    RouteCalc.init({ mapId: 'route-map', origin: ORIGIN, dest: DEST });
+    var info = document.getElementById('route-info');
+    if (info) info.textContent = ORIGIN + ' → ' + DEST + ' · {{ "%.0f"|format(active_order.distance_km) }} км';
+  }
+
+  // GPS: отправлять каждые 10 сек в пути или подъехал
+  if (STATUS === 'в пути' || STATUS === 'подъехал') {
+    sendLocation();
+    setInterval(sendLocation, 10000);
+  }
+
+  // Чат
+  loadChat();
+  setInterval(loadChat, 4000);
+});
+
+function sendLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    fetch('/api/driver/location', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+    }).catch(function(){});
+  }, function(){}, { timeout: 8000, maximumAge: 15000 });
+}
+
+function loadChat() {
+  fetch('/api/driver/chat/' + ORDER_ID)
+    .then(function(r) { return r.json(); })
+    .then(function(msgs) {
+      var box = document.getElementById('chat-box');
+      if (!box) return;
+      if (!msgs.length) {
+        box.innerHTML = '<div style="text-align:center;color:var(--text-3);font-size:12px;margin:auto;">Сообщений пока нет.<br>Напишите диспетчеру если нужна помощь.</div>';
+        return;
+      }
+      var html = ''; var unread = 0;
+      msgs.forEach(function(m) {
+        var isAdmin = m.sender === 'admin';
+        if (isAdmin) unread++;
+        html +=
+          '<div style="display:flex;flex-direction:column;align-items:' + (isAdmin ? 'flex-start' : 'flex-end') + ';">' +
+          '<div class="chat-bubble" style="background:' + (isAdmin ? 'var(--bg-3)' : 'var(--accent-dim)') + ';' +
+          'border:1px solid ' + (isAdmin ? 'var(--border)' : 'rgba(47,129,247,.25)') + ';">' +
+          escHtml(m.text) + '</div>' +
+          '<div style="font-size:10px;color:var(--text-3);margin-top:3px;padding:0 4px;">' +
+          (isAdmin ? '🎧 Поддержка' : 'Вы') + ' · ' + m.created_at + '</div></div>';
+      });
+      box.innerHTML = html;
+      box.scrollTop = box.scrollHeight;
+      var badge = document.getElementById('unread-badge');
+      if (badge) { badge.style.display = unread ? 'inline' : 'none'; badge.textContent = unread; }
+    }).catch(function(){});
+}
+
+function sendMsg() {
+  var inp = document.getElementById('chat-input');
+  var text = (inp ? inp.value : '').trim();
+  if (!text) return;
+  inp.value = '';
+  fetch('/api/driver/chat/' + ORDER_ID, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text }),
+  }).then(function() { loadChat(); });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+{% endif %}
+
+// ── Общий чат поддержки (всегда активен) ──
+window.addEventListener('DOMContentLoaded', function () {
+  loadGeneralChat();
+  setInterval(loadGeneralChat, 5000);
+});
+
+function loadGeneralChat() {
+  fetch('/api/driver/chat/general')
+    .then(function(r) { return r.json(); })
+    .then(function(msgs) {
+      var box = document.getElementById('general-chat-box');
+      if (!box) return;
+      if (!msgs || !msgs.length) {
+        box.innerHTML = '<div style="text-align:center;color:var(--text-3);font-size:12px;margin:auto;">Сообщений пока нет.<br>Напишите нам — мы всегда на связи!</div>';
+        return;
+      }
+      var html = '';
+      msgs.forEach(function(m) {
+        var isAdmin = m.sender === 'admin';
+        html +=
+          '<div style="display:flex;flex-direction:column;align-items:' + (isAdmin ? 'flex-start' : 'flex-end') + ';">' +
+          '<div style="max-width:75%;border-radius:12px;padding:8px 12px;font-size:13px;' +
+          'background:' + (isAdmin ? 'var(--bg-3)' : 'var(--accent-dim)') + ';' +
+          'border:1px solid ' + (isAdmin ? 'var(--border)' : 'rgba(47,129,247,.25)') + ';">' +
+          escHtml2(m.text) + '</div>' +
+          '<div style="font-size:10px;color:var(--text-3);margin-top:3px;padding:0 4px;">' +
+          (isAdmin ? '🎧 Поддержка' : 'Вы') + ' · ' + m.created_at + '</div></div>';
+      });
+      box.innerHTML = html;
+      box.scrollTop = box.scrollHeight;
+    }).catch(function(){});
+}
+
+function sendGeneralMsg() {
+  var inp = document.getElementById('general-chat-input');
+  var text = (inp ? inp.value : '').trim();
+  if (!text) return;
+  inp.value = '';
+  fetch('/api/driver/chat/general', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text }),
+  }).then(function() { loadGeneralChat(); });
+}
+
+function escHtml2(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
+

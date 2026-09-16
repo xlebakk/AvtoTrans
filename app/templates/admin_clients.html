@@ -1,0 +1,52 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+<div class="page-heading">
+  <p class="eyebrow">База клиентов</p>
+  <h1>Клиенты</h1>
+  <p style="margin-top:6px; font-size:13px;">Организации и частные лица, пользующиеся услугами компании</p>
+</div>
+
+<div class="table-card" style="padding:20px; margin-bottom:20px;">
+  <h2 style="margin-bottom:16px;">➕ Добавить клиента</h2>
+  <form action="/ui/clients" method="post" style="display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:end;">
+    <label style="text-transform:none; font-size:12px; color:var(--text-3);">
+      Имя / Организация
+      <input name="name" placeholder="ООО Пример" style="margin-top:6px;">
+    </label>
+    <label style="text-transform:none; font-size:12px; color:var(--text-3);">
+      Контакты
+      <input name="contacts" placeholder="+7 999 000-00-00, email" style="margin-top:6px;">
+    </label>
+    <button type="submit" style="height:40px;">Добавить</button>
+  </form>
+</div>
+
+<div class="table-card">
+  <div class="table-overflow">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Клиент</th>
+          <th>Контакты</th>
+          <th>Заказов</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for client in clients %}
+          <tr>
+            <td style="color:var(--text-3);">{{ client.id }}</td>
+            <td><strong>{{ client.name }}</strong></td>
+            <td style="color:var(--text-2);">{{ client.contacts }}</td>
+            <td>
+              <span style="background:var(--accent-dim);color:var(--accent);padding:2px 10px;border-radius:99px;font-size:12px;font-weight:700;">
+                {{ client.cargo_requests|length }}
+              </span>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

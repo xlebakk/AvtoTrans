@@ -1,0 +1,59 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+<div class="page-heading">
+  <p class="eyebrow">Автопарк</p>
+  <h1>Грузовики</h1>
+  <p style="margin-top:6px; font-size:13px;">Управление парком транспортных средств</p>
+</div>
+
+<div class="table-card" style="padding:20px; margin-bottom:20px;">
+  <h2 style="margin-bottom:16px;">➕ Добавить грузовик</h2>
+  <form action="/ui/vehicles" method="post" class="admin-form" style="border:none; padding:0; margin:0; background:transparent;">
+    <input name="plate_number" placeholder="Госномер (А000АА00)">
+    <input name="brand" placeholder="Марка и модель">
+    <input name="length_m" type="number" min="0.1" step="0.1" placeholder="Длина кузова, м">
+    <input name="width_m" type="number" min="0.1" step="0.1" placeholder="Ширина, м">
+    <input name="height_m" type="number" min="0.1" step="0.1" placeholder="Высота, м">
+    <input name="capacity_kg" type="number" min="1" step="1" placeholder="Грузоподъёмность, кг">
+    <input name="base_rate_per_km" type="number" min="1" step="1" placeholder="Тариф ₽/км">
+    <input name="fuel_consumption_per_100km" type="number" min="1" step="0.1" placeholder="Расход л/100 км" value="28">
+    <input name="fuel_price_per_liter" type="number" min="1" step="0.1" placeholder="Цена топлива ₽/л" value="60">
+    <button type="submit" style="align-self:end;">Добавить</button>
+  </form>
+</div>
+
+<div class="table-card">
+  <div class="table-overflow">
+    <table>
+      <thead>
+        <tr>
+          <th>Госномер</th>
+          <th>Марка и модель</th>
+          <th>Кузов (Д×Ш×В)</th>
+          <th>Объём, м³</th>
+          <th>Грузоподъём.</th>
+          <th>Тариф ₽/км</th>
+          <th>Расход л/100</th>
+          <th>Цена топлива</th>
+          <th>Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in vehicles %}
+          <tr>
+            <td><strong>{{ v.plate_number }}</strong></td>
+            <td>{{ v.brand }}</td>
+            <td style="color:var(--text-2); font-size:12px;">{{ "%.1f"|format(v.length_m) }}×{{ "%.1f"|format(v.width_m) }}×{{ "%.1f"|format(v.height_m) }} м</td>
+            <td><strong>{{ "%.1f"|format(v.volume_cubic_m) }}</strong></td>
+            <td>{{ "%.0f"|format(v.capacity_kg) }} кг</td>
+            <td>{{ "%.0f"|format(v.base_rate_per_km) }}</td>
+            <td style="color:#d29922;">{{ "%.1f"|format(v.fuel_consumption_per_100km) }}</td>
+            <td style="color:var(--text-2);">{{ "%.1f"|format(v.fuel_price_per_liter) }} ₽</td>
+            <td><span class="badge">{{ v.status.value }}</span></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,399 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+
+<a class="back-link" href="/admin/trips">← К рейсам</a>
+
+<div class="page-heading">
+  <p class="eyebrow">Рейс #{{ order.id }} · {{ order.status.value.upper() }}</p>
+  <h1>{{ order.cargo_request.cargo_name or "Груз" }} → {{ order.cargo_request.client.name }}</h1>
+  <p style="margin-top:6px;font-size:13px;color:var(--text-3);">
+    Создан {{ order.created_at.strftime("%d.%m.%Y в %H:%M") }}
+  </p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+
+  <!-- ── Маршрут + карта ── -->
+  <div class="chart-card" style="grid-column:1/-1;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div class="chart-title">🗺️ Маршрут рейса</div>
+        <div id="route-status" class="chart-subtitle" style="margin-top:4px;">
+          {{ order.cargo_request.origin }} → {{ order.cargo_request.destination or "—" }}
+        </div>
+      </div>
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+        <div style="text-align:right;">
+          <div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Расстояние</div>
+          <div style="font-size:22px;font-weight:800;color:#3fb950;">{{ "%.0f"|format(order.distance_km) }} км</div>
+        </div>
+        {% if order.departure_date %}
+        <div style="text-align:right;">
+          <div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Отправка</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text-2);">
+            {{ order.departure_date.strftime("%d.%m.%Y") }}{% if order.departure_time %} в {{ order.departure_time }}{% endif %}
+          </div>
+        </div>
+        {% endif %}
+        {% if order.delivery_date %}
+        <div style="text-align:right;">
+          <div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Доставка</div>
+          <div style="font-size:14px;font-weight:600;color:#3fb950;">{{ order.delivery_date.strftime("%d.%m.%Y") }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- GPS метка водителя -->
+    <div id="driver-location-bar" style="display:none;background:var(--accent-dim);border:1px solid var(--accent);border-radius:var(--radius-sm);padding:8px 14px;margin-bottom:12px;font-size:12px;color:var(--accent);display:flex;align-items:center;gap:8px;">
+      📡 <span id="driver-location-text">Определяем местоположение водителя…</span>
+    </div>
+
+    {% set editable = order.status.value in ['новый', 'назначен'] %}
+
+    <!-- Блок с блокировкой или кнопкой редактирования -->
+    {% if not editable %}
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:10px;
+                background:rgba(48,54,61,.6);border:1px solid var(--border);border-radius:var(--radius-sm);
+                font-size:12px;color:var(--text-3);">
+      🔒 Карта заблокирована — редактирование недоступно для рейсов в статусе
+      <strong style="color:var(--text-2);">{{ order.status.value }}</strong>
+    </div>
+    {% else %}
+    <!-- Панель: рейс ещё не начат, кнопка включения редактирования -->
+    <div id="edit-notice" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin-bottom:10px;
+                background:rgba(63,185,80,.06);border:1px solid rgba(63,185,80,.2);border-radius:var(--radius-sm);
+                font-size:12px;">
+      <div style="color:#3fb950;">
+        ✅ Рейс ещё не начат — маршрут можно изменить
+        <span style="color:var(--text-3);margin-left:8px;">
+          (сейчас: <em>{{ order.cargo_request.origin }}</em> → <em>{{ order.cargo_request.destination or '—' }}</em>)
+        </span>
+      </div>
+      <button id="edit-map-btn" onclick="activateEditMap()"
+              style="background:rgba(63,185,80,.15);color:#3fb950;border:1px solid rgba(63,185,80,.3);
+                     padding:6px 14px;border-radius:var(--radius-sm);font-size:11px;font-weight:700;
+                     cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:12px;">
+        ✏️ Редактировать маршрут
+      </button>
+    </div>
+
+    <!-- Панель режима редактирования: показывается после activateEditMap() -->
+    <div id="editing-panel" style="display:none;padding:10px 14px;margin-bottom:10px;
+                 background:rgba(210,153,34,.06);border:1px solid rgba(210,153,34,.25);border-radius:var(--radius-sm);">
+      <div style="font-size:12px;color:var(--yellow);font-weight:700;margin-bottom:6px;">
+        ✏️ Режим редактирования включён — кликните по карте для изменения точек А и Б
+      </div>
+      <div style="display:flex;gap:20px;font-size:11px;flex-wrap:wrap;">
+        <div>
+          <span style="color:var(--text-3);Было:">&#x1F4CD; Было Откуда:</span>
+          <strong style="color:var(--text-2);">{{ order.cargo_request.origin }}</strong>
+        </div>
+        <div>
+          <span style="color:var(--text-3);">&#x1F3C1; Было Куда:</span>
+          <strong style="color:var(--text-2);">{{ order.cargo_request.destination or '—' }}</strong>
+        </div>
+        <div style="color:var(--text-3);">
+          → Расстояние было: <strong>{{ "%.0f"|format(order.distance_km) }} км</strong>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div id="route-map" style="height:380px;border-radius:var(--radius-md);border:1px solid var(--border);overflow:hidden;"></div>
+  </div>
+
+  <!-- ── Информация о грузе ── -->
+  <div class="chart-card">
+    <div class="chart-title" style="margin-bottom:14px;">📦 Груз и клиент</div>
+    <dl style="display:grid;gap:10px;">
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Клиент</dt>
+        <dd style="font-weight:600;">{{ order.cargo_request.client.name }}</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Груз</dt>
+        <dd style="font-weight:600;">{{ order.cargo_request.cargo_name or "—" }}</dd>
+      </div>
+      {% if order.cargo_request.cargo_features %}
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Особенности</dt>
+        <dd style="font-size:12px;color:var(--text-2);">{{ order.cargo_request.cargo_features }}</dd>
+      </div>
+      {% endif %}
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Вес</dt>
+        <dd>{{ "%.0f"|format(order.cargo_request.weight_kg) }} кг</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Объём</dt>
+        <dd>{{ "%.1f"|format(order.cargo_request.volume_cubic_m) }} м³</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Откуда</dt>
+        <dd style="font-size:12px;">{{ order.cargo_request.origin }}</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;">
+        <dt style="color:var(--text-3);font-size:12px;">Куда</dt>
+        <dd style="font-size:12px;">{{ order.cargo_request.destination or "—" }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- ── Машина и водитель ── -->
+  <div class="chart-card">
+    <div class="chart-title" style="margin-bottom:14px;">🚛 Машина и водитель</div>
+    <dl style="display:grid;gap:10px;">
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Грузовик</dt>
+        <dd style="font-weight:600;">{{ order.vehicle.brand }}</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Номер</dt>
+        <dd><code style="background:var(--bg-3);padding:2px 8px;border-radius:4px;font-size:13px;">{{ order.vehicle.plate_number }}</code></dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Водитель</dt>
+        <dd style="font-weight:600;">{{ order.driver.full_name }}</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Категория</dt>
+        <dd>{{ order.driver.license_category }}</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Опыт</dt>
+        <dd>{{ order.driver.experience_years }} лет</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;">
+        <dt style="color:var(--text-3);font-size:12px;">Статус водителя</dt>
+        <dd><span class="badge">{{ order.driver.status.value }}</span></dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- ── Финансы ── -->
+  <div class="chart-card">
+    <div class="chart-title" style="margin-bottom:14px;">💰 Финансы рейса</div>
+    <dl style="display:grid;gap:10px;">
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Расстояние</dt>
+        <dd style="font-weight:700;">{{ "%.0f"|format(order.distance_km) }} км</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Тариф</dt>
+        <dd>{{ "%.0f"|format(order.vehicle.base_rate_per_km) }} ₽/км</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Доход</dt>
+        <dd style="font-weight:800;font-size:16px;">{{ "%.0f"|format(order.final_price) }} ₽</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Топливо</dt>
+        <dd style="color:#d29922;">−{{ "%.0f"|format(order.fuel_cost) }} ₽</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <dt style="color:var(--text-3);font-size:12px;">Прочие расходы</dt>
+        <dd style="color:var(--text-3);">−{{ "%.0f"|format(order.other_costs) }} ₽</dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;background:{% if order.profit >= 0 %}rgba(63,185,80,.06){% else %}rgba(248,81,73,.06){% endif %};border-radius:var(--radius-sm);padding:10px 12px;">
+        <dt style="font-weight:700;">Прибыль</dt>
+        <dd style="font-weight:800;font-size:18px;{% if order.profit >= 0 %}color:#3fb950{% else %}color:#f85149{% endif %}">
+          {{ "%.0f"|format(order.profit) }} ₽
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- ── Статус и действия ── -->
+  <div class="chart-card">
+    <div class="chart-title" style="margin-bottom:14px;">⚡ Статус и действия</div>
+
+    <!-- Шкала прогресса -->
+    <div style="margin-bottom:20px;">
+      {% set steps = [("назначен", "Назначен"), ("подъехал", "Подъехал"), ("в пути", "В пути"), ("доставлен", "Доставлен")] %}
+      {% set status_val = order.status.value %}
+      <div style="display:flex;gap:0;position:relative;">
+        {% for s_val, s_label in steps %}
+          {% set is_done = (s_val == "назначен" and status_val in ["назначен","подъехал","в пути","доставлен"])
+                        or (s_val == "подъехал"  and status_val in ["подъехал","в пути","доставлен"])
+                        or (s_val == "в пути"    and status_val in ["в пути","доставлен"])
+                        or (s_val == "доставлен" and status_val == "доставлен") %}
+          {% set is_current = s_val == status_val %}
+          <div style="flex:1;text-align:center;position:relative;">
+            <div style="width:28px;height:28px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;font-size:12px;font-weight:700;
+              {% if is_done %}background:#3fb950;color:#000;{% elif is_current %}background:var(--accent);color:#fff;{% else %}background:var(--bg-3);color:var(--text-3);{% endif %}">
+              {{ "✓" if is_done and not is_current else loop.index }}
+            </div>
+            <div style="font-size:10px;{% if is_current %}color:var(--accent);font-weight:700;{% else %}color:var(--text-3);{% endif %}">{{ s_label }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Кнопки действий -->
+    <div style="display:grid;gap:8px;">
+      {% if order.status.value in ["назначен", "новый"] %}
+        <form action="/ui/orders/{{ order.id }}/start" method="post">
+          <button style="width:100%;background:rgba(210,153,34,.15);color:#d29922;border:1px solid rgba(210,153,34,.4);padding:12px;">🚀 Отправить в путь</button>
+        </form>
+      {% endif %}
+      {% if order.status.value in ["назначен", "подъехал", "в пути"] %}
+        <form action="/ui/orders/{{ order.id }}/complete" method="post">
+          <button style="width:100%;background:rgba(63,185,80,.15);color:#3fb950;border:1px solid rgba(63,185,80,.4);padding:12px;">✅ Отметить доставленным</button>
+        </form>
+      {% endif %}
+      <div style="font-size:11px;color:var(--text-3);text-align:center;margin-top:4px;">
+        Текущий статус: <strong style="color:var(--text);">{{ order.status.value }}</strong>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+     ЧАТ С ВОДИТЕЛЕМ
+══════════════════════════════════════ -->
+<div class="chart-card">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+    <div class="chart-title">💬 Чат с водителем</div>
+    <span id="chat-unread-badge" style="display:none;background:#f85149;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;"></span>
+  </div>
+
+  <div id="chat-messages"
+       style="height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:10px;
+              background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:12px;">
+    <div style="text-align:center;color:var(--text-3);font-size:12px;margin:auto;">Загрузка сообщений…</div>
+  </div>
+
+  <div style="display:flex;gap:8px;">
+    <input id="chat-input" type="text" placeholder="Введите сообщение водителю…"
+           style="flex:1;" onkeydown="if(event.key==='Enter')sendAdminMsg()">
+    <button onclick="sendAdminMsg()"
+            style="background:var(--accent);color:#fff;padding:0 20px;border-radius:var(--radius-sm);border:none;font-weight:600;cursor:pointer;white-space:nowrap;">
+      Отправить
+    </button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+var ORDER_ID   = {{ order.id }};
+var ORIGIN     = {{ order.cargo_request.origin | tojson }};
+var DEST       = {{ (order.cargo_request.destination or '') | tojson }};
+var DRIVER_ID  = {{ order.driver_id }};
+
+// ── Карта ──────────────────────────────
+// Карта всегда запускается в readonly-режиме.
+// Редактирование включается только после нажатия кнопки "Редактировать маршрут".
+var MAP_EDITABLE = {{ 'true' if order.status.value in ['новый', 'назначен'] else 'false' }};
+var _mapInEditMode = false;
+
+window.addEventListener('DOMContentLoaded', function () {
+  // ВСЕГДА запускаем в readonly — даже если статус позволяет редактирование
+  RouteCalc.init({ mapId: 'route-map', origin: ORIGIN, dest: DEST, readonly: true });
+
+  // Начинаем опрос GPS водителя каждые 10 сек
+  pollDriverLocation();
+  setInterval(pollDriverLocation, 10000);
+
+  // Чат — первая загрузка
+  loadChat();
+  setInterval(loadChat, 4000);
+});
+
+// ── GPS водителя ───────────────────────
+var _driverMarker = null;
+
+function pollDriverLocation() {
+  fetch('/api/admin/driver-location/' + DRIVER_ID)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.lat || !d.lon) return;
+      var bar = document.getElementById('driver-location-bar');
+      var txt = document.getElementById('driver-location-text');
+      if (bar) bar.style.display = 'flex';
+
+      var lastSeen = d.last_seen ? new Date(d.last_seen).toLocaleTimeString('ru') : '?';
+      if (txt) txt.textContent = d.name + ' — последний сигнал ' + lastSeen;
+
+      var map = RouteCalc.map;
+      if (!map) return;
+
+      var icon = L.divIcon({
+        html: '<div style="background:#2f81f7;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 3px rgba(47,129,247,.4);"></div>',
+        className: '', iconSize: [14, 14], iconAnchor: [7, 7]
+      });
+
+      if (_driverMarker) {
+        _driverMarker.setLatLng([d.lat, d.lon]);
+      } else {
+        _driverMarker = L.marker([d.lat, d.lon], { icon: icon })
+          .bindTooltip(d.name + ' (сейчас)', { direction: 'top', permanent: true })
+          .addTo(map);
+      }
+    })
+    .catch(function() {});
+}
+
+// ── Чат ────────────────────────────────
+function loadChat() {
+  fetch('/api/admin/chat/' + ORDER_ID)
+    .then(function(r) { return r.json(); })
+    .then(function(msgs) {
+      var box = document.getElementById('chat-messages');
+      if (!box) return;
+      if (!msgs.length) {
+        box.innerHTML = '<div style="text-align:center;color:var(--text-3);font-size:12px;margin:auto;">Сообщений пока нет</div>';
+        return;
+      }
+      var html = '';
+      msgs.forEach(function(m) {
+        var isAdmin = m.sender === 'admin';
+        html += '<div style="display:flex;flex-direction:column;align-items:' + (isAdmin ? 'flex-end' : 'flex-start') + ';">' +
+          '<div style="max-width:75%;background:' + (isAdmin ? 'var(--accent-dim)' : 'var(--bg-3)') + ';' +
+          'border:1px solid ' + (isAdmin ? 'rgba(47,129,247,.3)' : 'var(--border)') + ';' +
+          'border-radius:12px;padding:8px 12px;font-size:13px;">' + escHtml(m.text) + '</div>' +
+          '<div style="font-size:10px;color:var(--text-3);margin-top:3px;padding:0 4px;">' +
+          (isAdmin ? 'Вы' : '🚛 Водитель') + ' · ' + m.created_at + '</div></div>';
+      });
+      box.innerHTML = html;
+      box.scrollTop = box.scrollHeight;
+    })
+    .catch(function() {});
+}
+
+function sendAdminMsg() {
+  var inp = document.getElementById('chat-input');
+  var text = (inp.value || '').trim();
+  if (!text) return;
+  inp.value = '';
+  fetch('/api/admin/chat/' + ORDER_ID, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text }),
+  }).then(function() { loadChat(); });
+}
+
+function activateEditMap() {
+  if (_mapInEditMode || !MAP_EDITABLE) return;
+  _mapInEditMode = true;
+
+  // Скрываем кнопку "Редактировать"
+  var notice = document.getElementById('edit-notice');
+  if (notice) notice.style.display = 'none';
+
+  // Показываем панель с прежними адресами
+  var editPanel = document.getElementById('editing-panel');
+  if (editPanel) editPanel.style.display = 'block';
+
+  // Включаем редактирование на карте
+  RouteCalc.enableEdit();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+{% endblock %}

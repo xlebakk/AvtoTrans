@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход — АвтоТранс</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    /* Role selector */
+    .role-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .role-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 10px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all .18s;
+      background: var(--bg-2);
+      text-align: center;
+      user-select: none;
+    }
+    .role-tab:hover { border-color: var(--accent); background: var(--accent-dim); }
+    .role-tab.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      box-shadow: 0 0 0 3px rgba(47,129,247,.12);
+    }
+    .role-tab .icon { font-size: 32px; line-height: 1; }
+    .role-tab .label { font-size: 13px; font-weight: 700; color: var(--text); }
+    .role-tab .sub { font-size: 10px; color: var(--text-3); }
+
+    /* Panels */
+    .panel { display: none; }
+    .panel.active { display: grid; gap: 14px; }
+
+    /* Divider */
+    .or-divider {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--text-3); font-size: 11px; margin: 4px 0;
+    }
+    .or-divider::before, .or-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+  </style>
+</head>
+<body>
+<div class="login-wrapper">
+  <div class="login-card" style="max-width:420px;">
+    <!-- Логотип -->
+    <div class="login-logo">АТ</div>
+    <div style="margin-bottom:24px; text-align:center;">
+      <h1 style="font-size:22px; margin-bottom:6px;">АвтоТранс</h1>
+      <p style="font-size:12px; color:var(--text-3);">Система автоматизации грузоперевозок</p>
+    </div>
+
+    <!-- Выбор роли -->
+    <div class="role-tabs" id="role-tabs">
+      <div class="role-tab active" data-role="admin" onclick="selectRole('admin')">
+        <span class="icon">🛡️</span>
+        <span class="label">Диспетчер</span>
+        <span class="sub">Администратор</span>
+      </div>
+      <div class="role-tab" data-role="driver" onclick="selectRole('driver')">
+        <span class="icon">🚛</span>
+        <span class="label">Водитель</span>
+        <span class="sub">Личный кабинет</span>
+      </div>
+    </div>
+
+    <!-- ── Панель Диспетчера ── -->
+    <div class="panel active" id="panel-admin">
+      <form action="/login" method="post" style="display:grid; gap:14px;">
+        <label>
+          <span style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Пароль диспетчера</span>
+          <input id="login-password" name="password" type="password" required
+                 autocomplete="current-password" placeholder="Введите пароль"
+                 style="margin-top:6px;">
+        </label>
+
+        {% if error and error != 'driver' %}
+          <div class="alert" style="margin:0;">Неверный пароль. Попробуйте снова.</div>
+        {% endif %}
+
+        <button class="primary-button" type="submit" style="margin-top:2px;">
+          Войти как диспетчер →
+        </button>
+      </form>
+    </div>
+
+    <!-- ── Панель Водителя ── -->
+    <div class="panel" id="panel-driver">
+      <form action="/driver/login" method="post" style="display:grid; gap:14px;">
+        <label>
+          <span style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">ID водителя</span>
+          <input name="driver_id" type="number" min="1" required
+                 placeholder="Ваш номер (1, 2, 3…)"
+                 style="margin-top:6px;">
+        </label>
+        <label>
+          <span style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;">Пароль</span>
+          <input name="password" type="password" required
+                 placeholder="Пароль, выданный диспетчером"
+                 style="margin-top:6px;">
+        </label>
+
+        {% if error == 'driver' %}
+          <div class="alert" style="margin:0;">Неверный ID или пароль. Обратитесь к диспетчеру.</div>
+        {% endif %}
+
+        <button class="primary-button" type="submit" style="margin-top:2px;
+          background:linear-gradient(135deg,#3fb950,#2ea043);">
+          Войти как водитель →
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function selectRole(role) {
+  document.querySelectorAll('.role-tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.role === role);
+  });
+  document.querySelectorAll('.panel').forEach(function(p) {
+    p.classList.toggle('active', p.id === 'panel-' + role);
+  });
+  var first = document.querySelector('#panel-' + role + ' input');
+  if (first) setTimeout(function() { first.focus(); }, 50);
+}
+
+// Auto-select driver tab if came from error=driver
+{% if error == 'driver' %}
+selectRole('driver');
+{% endif %}
+</script>
+</body>
+</html>

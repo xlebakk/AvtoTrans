@@ -1,0 +1,40 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+<div class="page-heading">
+  <p class="eyebrow">Диспетчер</p>
+  <h1>Заказы клиентов</h1>
+</div>
+
+<div style="margin-bottom:1rem;">
+  <a class="primary-button" href="/admin/orders-intake/new" style="display:inline-block; text-decoration:none; padding:0.6rem 1.4rem;">
+    ➕ Новый заказ
+  </a>
+</div>
+
+<div class="table-card">
+  <table>
+    <thead><tr><th>ID</th><th>Клиент</th><th>Маршрут</th><th>Груз</th><th>Вес / Объём</th><th>Дата</th><th></th></tr></thead>
+    <tbody>
+      {% for item in cargo_requests %}
+        <tr>
+          <td>#{{ item.id }}</td>
+          <td>{{ item.client.name }}</td>
+          <td>{{ item.origin }} → {{ item.destination or "не указана" }}</td>
+          <td>{{ item.cargo_name or "груз" }}{% if item.cargo_features %} ({{ item.cargo_features }}){% endif %}</td>
+          <td>
+            {{ "%.0f"|format(item.weight_kg) }} кг{% if item.volume_cubic_m %} / {{ "%.1f"|format(item.volume_cubic_m) }} м³{% endif %}
+          </td>
+          <td>{{ item.created_at.strftime("%d.%m.%Y") }}</td>
+          <td>
+            {% if item.order %}
+              <span class="badge">рейс #{{ item.order.id }}</span>
+            {% else %}
+              <a class="table-action" href="/admin/orders-intake/{{ item.id }}/match">Назначить рейс</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

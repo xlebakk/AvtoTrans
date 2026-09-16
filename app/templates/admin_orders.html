@@ -1,0 +1,79 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+<div class="page-heading">
+  <p class="eyebrow">Управление</p>
+  <h1>Рейсы</h1>
+  <p style="margin-top:6px; font-size:13px;">История и текущее состояние всех рейсов</p>
+</div>
+
+<div class="table-card">
+  <div class="table-overflow">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Груз / Клиент</th>
+          <th>Маршрут</th>
+          <th>Грузовик</th>
+          <th>Водитель</th>
+          <th>Расст., км</th>
+          <th>Доход, ₽</th>
+          <th>Топливо, ₽</th>
+          <th>Прочие, ₽</th>
+          <th>Прибыль, ₽</th>
+          <th>Статус</th>
+          <th>Отправка</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+          <tr style="cursor:pointer;" onclick="window.location='/admin/trips/{{ order.id }}'" title="Открыть рейс #{{ order.id }}">
+            <td><strong>#{{ order.id }}</strong></td>
+            <td>
+              <strong>{{ order.cargo_request.cargo_name or "Груз" }}</strong>
+              <small>{{ order.cargo_request.client.name }}</small>
+            </td>
+            <td style="max-width:200px; white-space:normal;">
+              <span style="color:var(--text-2); font-size:12px;">{{ order.cargo_request.origin }}</span><br>
+              <span style="color:var(--text-3);">↓</span>
+              <span style="font-size:12px;">{{ order.cargo_request.destination or "?" }}</span>
+            </td>
+            <td>
+              <strong>{{ order.vehicle.plate_number }}</strong>
+              <small>{{ order.vehicle.brand }}</small>
+            </td>
+            <td>{{ order.driver.full_name }}</td>
+            <td>{{ "%.0f"|format(order.distance_km) }}</td>
+            <td><strong>{{ "%.0f"|format(order.final_price) }}</strong></td>
+            <td style="color:var(--yellow);">{{ "%.0f"|format(order.fuel_cost) }}</td>
+            <td style="color:var(--text-3);">{{ "%.0f"|format(order.other_costs) }}</td>
+            <td style="font-weight:700; {% if order.profit >= 0 %}color:#3fb950{% else %}color:#f85149{% endif %}">
+              {{ "%.0f"|format(order.profit) }}
+            </td>
+            <td><span class="badge">{{ order.status.value }}</span></td>
+            <td>{{ order.departure_date.strftime("%d.%m.%Y") if order.departure_date else "—" }}</td>
+            <td class="actions">
+              <a href="/admin/trips/{{ order.id }}"
+                 style="display:inline-block;padding:5px 10px;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;color:var(--text-2);text-decoration:none;white-space:nowrap;"
+                 onclick="event.stopPropagation()">
+                📋 Детали
+              </a>
+              {% if order.status.value in ["назначен", "новый"] %}
+                <form action="/ui/orders/{{ order.id }}/start" method="post" onclick="event.stopPropagation()">
+                  <button style="background:rgba(210,153,34,0.15);color:#d29922;border:1px solid rgba(210,153,34,0.3);">В путь</button>
+                </form>
+              {% endif %}
+              {% if order.status.value in ["назначен", "подъехал", "в пути"] %}
+                <form action="/ui/orders/{{ order.id }}/complete" method="post" onclick="event.stopPropagation()">
+                  <button style="background:rgba(63,185,80,0.15);color:#3fb950;border:1px solid rgba(63,185,80,0.3);">Доставлен ✓</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

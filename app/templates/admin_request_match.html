@@ -1,0 +1,208 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+<a class="back-link" href="/admin/orders-intake">← К заказам клиентов</a>
+<div class="page-heading">
+  <p class="eyebrow">Заказ #{{ cargo_request.id }} — {{ cargo_request.client.name }}</p>
+  <h1>Назначение рейса</h1>
+  <p>
+    <strong>Груз:</strong> {{ cargo_request.cargo_name or "Груз" }}{% if cargo_request.cargo_features %} — {{ cargo_request.cargo_features }}{% endif %},
+    {{ "%.0f"|format(cargo_request.weight_kg) }} кг{% if cargo_request.volume_cubic_m %} / {{ "%.1f"|format(cargo_request.volume_cubic_m) }} м³{% endif %}
+  </p>
+</div>
+
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<!-- ═══════════════════════════════════════
+     БЛОК КАРТЫ-НАВИГАТОРА
+═══════════════════════════════════════ -->
+<div class="chart-card" style="margin-bottom:22px;">
+
+  <!-- Шапка: статус + показатели -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+    <div>
+      <div class="chart-title">🗺️ Маршрут</div>
+      <div id="route-status" class="chart-subtitle" style="margin-top:4px;max-width:500px;">
+        Загружаем маршрут: {{ cargo_request.origin }} → {{ cargo_request.destination or "не указан" }}
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Расстояние</div>
+        <div id="route-distance-badge" style="font-size:24px;font-weight:800;color:#3fb950;line-height:1.1;margin-top:2px;">—</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Время в пути</div>
+        <div id="route-duration" style="font-size:14px;font-weight:600;color:var(--text-2);margin-top:4px;">—</div>
+      </div>
+      <button type="button" onclick="RouteCalc.recalcFromInputs()" title="Пересчитать маршрут по адресам"
+              style="background:var(--bg-3);color:var(--text-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;"
+              onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-2)'">
+        ↻ Пересчитать
+      </button>
+    </div>
+  </div>
+
+  <!-- Адресные поля (синхронизируются с картой) -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+    <label style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;display:grid;gap:5px;">
+      📍 Откуда — точка А
+      <input id="inp-origin" type="text" value="{{ cargo_request.origin }}"
+             placeholder="Город или адрес…" title="Нажмите Enter для геокодирования">
+    </label>
+    <label style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;display:grid;gap:5px;">
+      🏁 Куда — точка Б
+      <input id="inp-dest" type="text" value="{{ cargo_request.destination or '' }}"
+             placeholder="Город или адрес…" title="Нажмите Enter для геокодирования">
+    </label>
+  </div>
+
+  <!-- Подсказка -->
+  <div style="font-size:11px;color:var(--text-3);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+    <span>💡</span>
+    <span>Нажмите Enter в поле адреса · Кликните по карте для расстановки точек · Используйте 🔍 поиск на карте · Маркеры можно перетаскивать</span>
+  </div>
+
+  <!-- Карта Leaflet -->
+  <div id="route-map" style="height:420px;border-radius:var(--radius-md);border:1px solid var(--border);overflow:hidden;"></div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     КАРТОЧКИ МАШИН + ФОРМЫ
+═══════════════════════════════════════ -->
+{% if matches %}
+  <div class="vehicle-list">
+    {% for match in matches %}
+      <article class="vehicle-card">
+
+        {% if show_truck_viewer %}
+          <div class="truck-viewer large" data-truck-viewer
+               {% if truck_model_url %}data-model="{{ truck_model_url }}"{% endif %}></div>
+        {% endif %}
+
+        <div>
+          {% if match.recommended %}
+            <span class="badge" style="background:var(--green-dim);color:#3fb950;border-color:rgba(63,185,80,.3);">✓ Рекомендовано</span>
+          {% endif %}
+          <h2 style="margin-top:8px;">{{ match.vehicle.brand }}</h2>
+          <p style="font-size:13px;color:var(--text-3);">{{ match.vehicle.plate_number }}</p>
+        </div>
+
+        <dl>
+          <div><dt>Объём кузова</dt><dd>{{ "%.1f"|format(match.vehicle.volume_cubic_m) }} м³</dd></div>
+          <div><dt>Грузоподъёмность</dt><dd>{{ "%.0f"|format(match.vehicle.capacity_kg) }} кг</dd></div>
+          <div><dt>Расход топлива</dt><dd>{{ "%.1f"|format(match.vehicle.fuel_consumption_per_100km) }} л/100 км</dd></div>
+          <div><dt>Тариф</dt><dd>{{ "%.0f"|format(match.vehicle.base_rate_per_km) }} ₽/км</dd></div>
+          {% if match.estimated_price %}
+            <div><dt>Стоимость рейса</dt><dd style="color:#3fb950;font-weight:800;">≈ {{ "%.0f"|format(match.estimated_price) }} ₽</dd></div>
+          {% endif %}
+        </dl>
+
+        <form action="/ui/orders" method="post" class="assign-form">
+          <input type="hidden" name="cargo_request_id" value="{{ cargo_request.id }}">
+          <input type="hidden" name="vehicle_id"       value="{{ match.vehicle.id }}">
+
+          <!-- Водитель -->
+          <label>Водитель
+            <select name="driver_id" required>
+              {% for driver in available_drivers %}
+                <option value="{{ driver.id }}">
+                  {{ driver.full_name }} ({{ driver.license_category }}, {{ driver.experience_years }} лет)
+                </option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <!-- Расстояние (автозаполняется с карты) -->
+          <label>Расстояние, км
+            <input name="distance_km" type="number" min="1" step="1"
+                   value="{{ match.estimated_distance_km | int if match.estimated_distance_km else '' }}"
+                   placeholder="Будет рассчитано с карты автоматически">
+          </label>
+
+          <!-- Дата без года: месяц + день -->
+          <div style="display:grid;grid-template-columns:1fr 90px;gap:10px;">
+            <label>Месяц отправки
+              <select class="month-pick" data-hidden="dep-{{ match.vehicle.id }}" style="margin-top:5px;"></select>
+            </label>
+            <label>День
+              <input class="day-pick" data-hidden="dep-{{ match.vehicle.id }}"
+                     type="number" min="1" max="31" style="margin-top:5px;">
+            </label>
+          </div>
+          <input type="hidden" name="departure_date" id="dep-{{ match.vehicle.id }}">
+
+          <!-- Время прибытия -->
+          <label>Время прибытия водителя
+            <div style="display:flex;align-items:center;gap:10px;margin-top:5px;">
+              <input name="departure_time" type="time" value="09:00"
+                     style="max-width:130px;font-size:16px;font-weight:700;color:var(--accent);">
+              <span style="font-size:11px;color:var(--text-3);">когда водитель должен быть на месте</span>
+            </div>
+          </label>
+
+          <!-- Прочие расходы -->
+          <label>Прочие расходы, ₽
+            <input name="other_costs" type="number" min="0" step="0.01" value="0"
+                   placeholder="зарплата, сборы, ТО…">
+          </label>
+
+          <button type="submit" style="background:linear-gradient(135deg,var(--accent),#1a6ed8);margin-top:4px;">
+            🚛 Создать рейс
+          </button>
+        </form>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">Нет свободных подходящих машин для этого груза.</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+/* ═══════════ ВЫБОР МЕСЯЦА + ДНЯ БЕЗ ГОДА ═══════════ */
+(function () {
+  var MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  var now = new Date();
+  var cY = now.getFullYear(), cM = now.getMonth(), cD = now.getDate();
+
+  document.querySelectorAll('.month-pick').forEach(function (sel) {
+    var hidId = sel.getAttribute('data-hidden');
+    // Генерируем 12 будущих месяцев
+    for (var i = 0; i < 12; i++) {
+      var d = new Date(cY, cM + i, 1);
+      var opt = document.createElement('option');
+      opt.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      opt.textContent = MONTHS[d.getMonth()] + (d.getFullYear() !== cY ? ' ' + d.getFullYear() : '');
+      sel.appendChild(opt);
+    }
+
+    // Установить текущий день
+    var dayInp = sel.closest('form').querySelector('.day-pick');
+    if (dayInp) dayInp.value = cD;
+
+    function sync() {
+      var hid = document.getElementById(hidId);
+      if (!hid || !dayInp) return;
+      var day = String(dayInp.value || cD).padStart(2, '0');
+      hid.value = sel.value + '-' + day;
+    }
+    sync();
+    sel.addEventListener('change', sync);
+    if (dayInp) dayInp.addEventListener('input', sync);
+  });
+})();
+
+/* ═══════════ ИНИЦИАЛИЗАЦИЯ КАРТЫ ═══════════ */
+window.addEventListener('DOMContentLoaded', function () {
+  RouteCalc.init({
+    mapId: 'route-map',
+    origin: {{ cargo_request.origin | tojson }},
+    dest:   {{ (cargo_request.destination or '') | tojson }},
+  });
+});
+</script>
+{% endblock %}

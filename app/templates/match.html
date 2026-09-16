@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="simple-page">
+  <a class="back-link" href="/">← Новая заявка</a>
+  <div class="page-heading">
+    <p class="eyebrow">Заявка #{{ cargo_request.id }}</p>
+    <h1>Подходящие машины</h1>
+    <p>
+      {{ cargo_request.origin }} - {{ cargo_request.destination or "доставка не указана" }},
+      {{ "%.0f"|format(cargo_request.weight_kg) }} кг,
+      {{ "%.2f"|format(cargo_request.volume_cubic_m) if cargo_request.volume_cubic_m else "объём не указан" }}.
+    </p>
+    <p>{{ cargo_request.cargo_name or "Груз" }}{% if cargo_request.cargo_features %}: {{ cargo_request.cargo_features }}{% endif %}</p>
+  </div>
+
+  {% if matches %}
+    <div class="vehicle-list">
+      {% for match in matches %}
+        <article class="vehicle-card">
+          {% if show_truck_viewer %}
+            <div class="truck-viewer" data-truck-viewer {% if truck_model_url %}data-model="{{ truck_model_url }}"{% endif %}></div>
+          {% endif %}
+          <div>
+            {% if match.recommended %}<span class="badge recommended">рекомендовано</span>{% endif %}
+            <h2>{{ match.vehicle.brand }}</h2>
+            <p>{{ match.vehicle.plate_number }}</p>
+          </div>
+          <dl>
+            <div><dt>Объём</dt><dd>{{ "%.1f"|format(match.vehicle.volume_cubic_m) }} м³</dd></div>
+            <div><dt>Запас</dt><dd>{{ "%.1f"|format(match.volume_spare_cubic_m) }} м³</dd></div>
+            <div><dt>Грузоподъёмность</dt><dd>{{ "%.0f"|format(match.vehicle.capacity_kg) }} кг</dd></div>
+            <div><dt>Тариф</dt><dd>{{ "%.0f"|format(match.vehicle.base_rate_per_km) }} / км</dd></div>
+            {% if match.estimated_price %}
+              <div><dt>Примерная цена</dt><dd>{{ "%.2f"|format(match.estimated_price) }}</dd></div>
+            {% else %}
+              <div><dt>Расчёт</dt><dd>по тарифу за 1 км</dd></div>
+            {% endif %}
+          </dl>
+        </article>
+      {% endfor %}
+    </div>
+    <div class="notice">Заявка сохранена. Диспетчер свяжется с вами и согласует машину, водителя и время выезда.</div>
+  {% else %}
+    <div class="empty">Сейчас нет свободной машины под эти параметры. Заявка сохранена, диспетчер проверит автопарк вручную.</div>
+  {% endif %}
+</section>
+{% endblock %}

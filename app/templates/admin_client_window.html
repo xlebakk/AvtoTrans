@@ -1,0 +1,92 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+<div class="page-heading">
+  <p class="eyebrow">Конструктор</p>
+  <h1>Клиентское окно</h1>
+  <p>Здесь админ настраивает, что видит клиент: тексты, порядок блоков, карту и 3D-модель.</p>
+</div>
+
+<form action="/admin/client-window" method="post" class="builder-form">
+  <section class="builder-section">
+    <h2>Тексты</h2>
+    <label>Метка над заголовком
+      <input name="client_badge" value="{{ ui_config.client_badge }}" required>
+    </label>
+    <label>Главный заголовок
+      <input name="client_title" value="{{ ui_config.client_title }}" required>
+    </label>
+    <label>Описание
+      <textarea name="client_description" rows="3" required>{{ ui_config.client_description }}</textarea>
+    </label>
+  </section>
+
+  <section class="builder-section">
+    <h2>Порядок блоков</h2>
+    <div class="builder-preview-order" aria-label="Текущий порядок блоков">
+      {% for section in ui_config.sections_order %}
+        {% if section == "contacts" %}
+          <span>Контакты</span>
+        {% elif section == "cargo" %}
+          <span>Груз</span>
+        {% elif section == "route" %}
+          <span>Маршрут</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <div class="form-grid">
+      <label>Первый блок
+        <select name="section_1">
+          {% for code, name in [("contacts", "Контакты"), ("cargo", "Груз"), ("route", "Маршрут")] %}
+            <option value="{{ code }}" {% if ui_config.sections_order[0] == code %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Второй блок
+        <select name="section_2">
+          {% for code, name in [("contacts", "Контакты"), ("cargo", "Груз"), ("route", "Маршрут")] %}
+            <option value="{{ code }}" {% if ui_config.sections_order[1] == code %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Третий блок
+        <select name="section_3">
+          {% for code, name in [("contacts", "Контакты"), ("cargo", "Груз"), ("route", "Маршрут")] %}
+            <option value="{{ code }}" {% if ui_config.sections_order[2] == code %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="builder-section">
+    <h2>Карта и 3D</h2>
+    <label class="check-row">
+      <input type="checkbox" name="show_map" {% if ui_config.show_map %}checked{% endif %}>
+      Показывать карту в оформлении заказа
+    </label>
+    <label>Какая 3D-модель показывается
+      <select name="viewer_model">
+        <option value="dae" {% if ui_config.model_mode == "dae" %}selected{% endif %}>model.dae</option>
+        <option value="glb" {% if ui_config.model_mode == "glb" %}selected{% endif %}>truck.glb</option>
+        <option value="built_in" {% if ui_config.model_mode == "built_in" %}selected{% endif %}>Встроенная простая модель</option>
+        <option value="none" {% if ui_config.model_mode == "none" %}selected{% endif %}>Не показывать 3D</option>
+      </select>
+    </label>
+    <div class="builder-model-preview">
+      {% if show_truck_viewer %}
+        <div
+          class="truck-viewer"
+          data-truck-viewer
+          {% if truck_model_url %}data-model="{{ truck_model_url }}"{% endif %}
+          aria-label="Предпросмотр 3D-модели"
+        ></div>
+      {% else %}
+        <div class="empty-state">3D-модель скрыта в клиентском окне.</div>
+      {% endif %}
+    </div>
+  </section>
+
+  <button type="submit">Сохранить настройки</button>
+  <a class="primary-link muted-link" href="/">Посмотреть клиентское окно</a>
+</form>
+{% endblock %}

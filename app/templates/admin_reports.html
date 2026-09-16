@@ -1,0 +1,434 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+<div class="page-heading">
+  <p class="eyebrow">Аналитика</p>
+  <h1>Отчёты и статистика</h1>
+  <p style="margin-top:6px;font-size:13px;">Финансовые показатели по рейсам: доходы, расходы, прибыль</p>
+</div>
+
+<!-- Общая финансовая сводка -->
+<section class="metrics" style="margin-bottom:20px;">
+  <div>
+    <small>Общий доход</small>
+    <span style="color:#3fb950;font-size:24px;">{{ "%.0f"|format(total_income) }} ₽</span>
+  </div>
+  <div>
+    <small>Топливо</small>
+    <span style="color:#d29922;font-size:24px;">{{ "%.0f"|format(total_fuel) }} ₽</span>
+  </div>
+  <div>
+    <small>Прочие расходы</small>
+    <span style="font-size:24px;">{{ "%.0f"|format(total_other) }} ₽</span>
+  </div>
+  <div>
+    <small>Чистая прибыль</small>
+    <span style="font-size:24px;{% if total_profit>=0 %}color:#3fb950{% else %}color:#f85149{% endif %}">
+      {{ "%.0f"|format(total_profit) }} ₽
+    </span>
+  </div>
+</section>
+
+<!-- Выбор месяца -->
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+  <span style="font-size:13px;color:var(--text-3);font-weight:600;">Фильтр по месяцу:</span>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;" id="month-filter-btns">
+    <a href="/admin/reports"
+       class="month-btn {% if not selected_month %}month-btn-active{% endif %}">
+      Все месяцы
+    </a>
+    {% for s in monthly_stats %}
+      <a href="/admin/reports?month={{ s.month_key }}"
+         class="month-btn {% if selected_month == s.month_key %}month-btn-active{% endif %}">
+        {{ s.month_label }}
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Блок «Выбранный месяц vs предыдущий» -->
+{% if selected_month and monthly_stats|length >= 1 %}
+  {% set cur = namespace(data=None) %}
+  {% set prev = namespace(data=None) %}
+  {% for i in range(monthly_stats|length) %}
+    {% if monthly_stats[i].month_key == selected_month %}
+      {% set cur.data = monthly_stats[i] %}
+      {% if i > 0 %}{% set prev.data = monthly_stats[i-1] %}{% endif %}
+    {% endif %}
+  {% endfor %}
+  {% if cur.data %}
+  <div class="compare-block" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+    {% set fields = [
+      ('Доход', cur.data.income, prev.data.income if prev.data else none, '#3fb950'),
+      ('Топливо', cur.data.fuel, prev.data.fuel if prev.data else none, '#d29922'),
+      ('Прочие расходы', cur.data.other, prev.data.other if prev.data else none, '#8b949e'),
+      ('Прибыль', cur.data.profit, prev.data.profit if prev.data else none, '#2f81f7'),
+    ] %}
+    {% for label, cur_val, prev_val, color in fields %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;">
+      <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">{{ label }}</div>
+      <div style="font-size:22px;font-weight:800;color:{{ color }};margin-bottom:6px;">{{ "%.0f"|format(cur_val) }} ₽</div>
+      {% if prev_val is not none and prev_val > 0 %}
+        {% set diff_pct = ((cur_val - prev_val) / prev_val * 100) | round(1) %}
+        <div style="font-size:12px;font-weight:600;color:{% if diff_pct>=0 %}#3fb950{% else %}#f85149{% endif %}">
+          {% if diff_pct >= 0 %}↑{% else %}↓{% endif %} {{ diff_pct|abs }}% от прошлого месяца
+        </div>
+      {% elif prev_val is not none %}
+        <div style="font-size:12px;color:var(--text-3);">Нет данных за прошлый месяц</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endif %}
+
+<!-- ГРАФИКИ -->
+<div style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:20px;">
+
+  <!-- Основной: Доходы и расходы по месяцам (сгруппированные бары) -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div>
+        <div class="chart-title">Доходы, расходы и прибыль по месяцам</div>
+        <div class="chart-subtitle">Сравнение финансовых показателей</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="chart-type-btn active" id="btn-bar" onclick="switchChart('bar')">Бары</button>
+        <button class="chart-type-btn" id="btn-line" onclick="switchChart('line')">Линия</button>
+      </div>
+    </div>
+    <div style="height:300px;position:relative;">
+      <canvas id="mainChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Правый: Разбивка расходов (donut) -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div>
+        <div class="chart-title">Структура дохода</div>
+        <div class="chart-subtitle">Всего: {{ "%.0f"|format(total_income) }} ₽</div>
+      </div>
+    </div>
+    <div style="height:200px;position:relative;display:flex;align-items:center;justify-content:center;">
+      <canvas id="donutChart"></canvas>
+    </div>
+    <div style="margin-top:16px;display:grid;gap:8px;">
+      <div class="legend-row"><span class="legend-dot" style="background:#3fb950"></span>Прибыль — {{ "%.0f"|format(total_profit) }} ₽</div>
+      <div class="legend-row"><span class="legend-dot" style="background:#d29922"></span>Топливо — {{ "%.0f"|format(total_fuel) }} ₽</div>
+      <div class="legend-row"><span class="legend-dot" style="background:#8b949e"></span>Прочие расходы — {{ "%.0f"|format(total_other) }} ₽</div>
+    </div>
+  </div>
+</div>
+
+<!-- Линия тренда: Рейсы по месяцам -->
+<div class="chart-card" style="margin-bottom:20px;">
+  <div class="chart-header">
+    <div>
+      <div class="chart-title">Количество рейсов по месяцам</div>
+      <div class="chart-subtitle">Динамика загруженности</div>
+    </div>
+  </div>
+  <div style="height:180px;position:relative;">
+    <canvas id="tripsChart"></canvas>
+  </div>
+</div>
+
+<!-- Таблица: Рентабельность грузовиков -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+  <div class="table-card">
+    <div style="padding:18px 20px 14px;"><h2>🚛 Рентабельность по грузовикам</h2></div>
+    <div class="table-overflow">
+      <table>
+        <thead>
+          <tr><th>Грузовик</th><th>Рейсов</th><th>Пробег</th><th>Доход</th><th>Топливо</th><th>Прибыль</th></tr>
+        </thead>
+        <tbody>
+          {% for row in utilization %}
+          <tr>
+            <td><strong>{{ row.plate_number }}</strong><small>{{ row.brand }}</small></td>
+            <td>{{ row.trips_count }}</td>
+            <td>{{ "%.0f"|format(row.total_distance_km) }} км</td>
+            <td>{{ "%.0f ₽"|format(row.total_income) }}</td>
+            <td style="color:#d29922;">{{ "%.0f ₽"|format(row.total_fuel_cost) }}</td>
+            <td style="font-weight:700;{% if row.total_profit>=0 %}color:#3fb950{% else %}color:#f85149{% endif %}">{{ "%.0f ₽"|format(row.total_profit) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div style="padding:18px 20px 14px;"><h2>🏢 Доход по клиентам</h2></div>
+    <div class="table-overflow">
+      <table>
+        <thead><tr><th>Клиент</th><th>Заказов</th><th>Доход, ₽</th></tr></thead>
+        <tbody>
+          {% for row in income_clients %}
+          <tr>
+            <td>{{ row.client_name }}</td>
+            <td>{{ row.orders_count }}</td>
+            <td style="font-weight:700;color:#3fb950;">{{ "%.0f"|format(row.total_income) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- История рейсов -->
+<div class="table-card">
+  <div style="padding:18px 20px 14px;display:flex;justify-content:space-between;align-items:center;">
+    <h2>📋 История рейсов{% if selected_month %} — {{ monthly_stats | selectattr('month_key','equalto',selected_month) | map(attribute='month_label') | first | default(selected_month) }}{% endif %}</h2>
+    <span style="font-size:12px;color:var(--text-3);">{{ filtered_trips|length }} записей</span>
+  </div>
+  <div class="table-overflow">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Клиент</th><th>Маршрут</th><th>Грузовик</th><th>Водитель</th>
+          <th>Км</th><th>Доход, ₽</th><th>Топливо, ₽</th><th>Прочие, ₽</th><th>Прибыль, ₽</th>
+          <th>Статус</th><th>Дата</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in filtered_trips %}
+        <tr>
+          <td><strong>#{{ row.order_id }}</strong></td>
+          <td>{{ row.client_name }}</td>
+          <td style="max-width:160px;white-space:normal;font-size:12px;color:var(--text-2);">{{ row.origin }} → {{ row.destination }}</td>
+          <td>{{ row.vehicle_plate }}</td>
+          <td>{{ row.driver_name }}</td>
+          <td>{{ "%.0f"|format(row.distance_km) }}</td>
+          <td><strong>{{ "%.0f"|format(row.final_price) }}</strong></td>
+          <td style="color:#d29922;">{{ "%.0f"|format(row.fuel_cost) }}</td>
+          <td style="color:var(--text-3);">{{ "%.0f"|format(row.other_costs) }}</td>
+          <td style="font-weight:700;{% if row.profit>=0 %}color:#3fb950{% else %}color:#f85149{% endif %}">{{ "%.0f"|format(row.profit) }}</td>
+          <td><span class="badge">{{ row.status.value }}</span></td>
+          <td>{{ row.departure_date.strftime("%d.%m.%Y") if row.departure_date else "—" }}</td>
+        </tr>
+        {% endfor %}
+        {% if not filtered_trips %}
+        <tr><td colspan="12" style="text-align:center;padding:32px;color:var(--text-3);">Нет данных за выбранный период</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+// ─── Данные из backend ───────────────────────────────────────────
+const rawStats = {{ monthly_stats | tojson }};
+
+const labels   = rawStats.map(d => d.month_label);
+const income   = rawStats.map(d => d.income);
+const fuel     = rawStats.map(d => d.fuel);
+const other    = rawStats.map(d => d.other);
+const profit   = rawStats.map(d => d.profit);
+const trips    = rawStats.map(d => d.trips);
+
+// ─── Общие настройки Chart.js ─────────────────────────────────────
+Chart.defaults.color = '#8b949e';
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size = 12;
+
+const gridColor = 'rgba(48,54,61,0.6)';
+const tickColor = '#6e7681';
+
+const commonScales = {
+  x: {
+    grid: { color: gridColor },
+    ticks: { color: tickColor },
+  },
+  y: {
+    grid: { color: gridColor },
+    ticks: {
+      color: tickColor,
+      callback: v => v >= 1000 ? (v/1000).toFixed(0)+'к ₽' : v+'₽',
+    },
+  },
+};
+
+const commonOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: { color: '#8b949e', usePointStyle: true, padding: 16, font: { size: 12 } },
+    },
+    tooltip: {
+      backgroundColor: '#161b22',
+      borderColor: 'rgba(48,54,61,0.8)',
+      borderWidth: 1,
+      titleColor: '#e6edf3',
+      bodyColor: '#8b949e',
+      padding: 12,
+      callbacks: {
+        label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('ru-RU')} ₽`,
+      },
+    },
+  },
+};
+
+// ─── Основной график (бар / линия) ───────────────────────────────
+const mainCtx = document.getElementById('mainChart').getContext('2d');
+
+const barDatasets = [
+  {
+    label: 'Доход',
+    data: income,
+    backgroundColor: 'rgba(63,185,80,0.75)',
+    borderColor: '#3fb950',
+    borderWidth: 1,
+    borderRadius: 4,
+  },
+  {
+    label: 'Топливо',
+    data: fuel,
+    backgroundColor: 'rgba(210,153,34,0.75)',
+    borderColor: '#d29922',
+    borderWidth: 1,
+    borderRadius: 4,
+  },
+  {
+    label: 'Прочие расходы',
+    data: other,
+    backgroundColor: 'rgba(139,148,158,0.6)',
+    borderColor: '#8b949e',
+    borderWidth: 1,
+    borderRadius: 4,
+  },
+  {
+    label: 'Прибыль',
+    data: profit,
+    backgroundColor: 'rgba(47,129,247,0.75)',
+    borderColor: '#2f81f7',
+    borderWidth: 1,
+    borderRadius: 4,
+  },
+];
+
+const lineDatasets = barDatasets.map(d => ({
+  ...d,
+  type: 'line',
+  fill: false,
+  tension: 0.35,
+  pointRadius: 5,
+  pointHoverRadius: 7,
+  borderWidth: 2,
+  backgroundColor: d.borderColor,
+}));
+
+let currentType = 'bar';
+let mainChart = new Chart(mainCtx, {
+  type: 'bar',
+  data: { labels, datasets: barDatasets },
+  options: { ...commonOptions, scales: commonScales },
+});
+
+function switchChart(type) {
+  if (currentType === type) return;
+  currentType = type;
+  mainChart.destroy();
+  document.getElementById('btn-bar').classList.toggle('active', type === 'bar');
+  document.getElementById('btn-line').classList.toggle('active', type === 'line');
+  const datasets = type === 'line' ? lineDatasets : barDatasets;
+  mainChart = new Chart(mainCtx, {
+    type: type === 'line' ? 'line' : 'bar',
+    data: { labels, datasets },
+    options: { ...commonOptions, scales: commonScales },
+  });
+}
+
+// ─── Donut: Структура дохода ──────────────────────────────────────
+const totalIncome = {{ total_income }};
+const totalFuel   = {{ total_fuel }};
+const totalOther  = {{ total_other }};
+const totalProfit = {{ total_profit }};
+
+const donutCtx = document.getElementById('donutChart').getContext('2d');
+new Chart(donutCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Прибыль', 'Топливо', 'Прочие расходы'],
+    datasets: [{
+      data: [Math.max(totalProfit, 0), totalFuel, totalOther],
+      backgroundColor: ['#3fb950', '#d29922', '#8b949e'],
+      borderColor: '#161b22',
+      borderWidth: 3,
+      hoverOffset: 6,
+    }],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '68%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#161b22',
+        borderColor: 'rgba(48,54,61,0.8)',
+        borderWidth: 1,
+        titleColor: '#e6edf3',
+        bodyColor: '#8b949e',
+        callbacks: {
+          label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString('ru-RU')} ₽`,
+        },
+      },
+    },
+  },
+});
+
+// ─── Линия: Количество рейсов ─────────────────────────────────────
+const tripsCtx = document.getElementById('tripsChart').getContext('2d');
+new Chart(tripsCtx, {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Рейсов',
+      data: trips,
+      borderColor: '#a371f7',
+      backgroundColor: 'rgba(163,113,247,0.1)',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 6,
+      pointBackgroundColor: '#a371f7',
+      pointBorderColor: '#161b22',
+      pointBorderWidth: 2,
+      pointHoverRadius: 8,
+      borderWidth: 2,
+    }],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#161b22',
+        borderColor: 'rgba(48,54,61,0.8)',
+        borderWidth: 1,
+        titleColor: '#e6edf3',
+        bodyColor: '#8b949e',
+        callbacks: { label: ctx => ` Рейсов: ${ctx.parsed.y}` },
+      },
+    },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: tickColor } },
+      y: {
+        grid: { color: gridColor },
+        ticks: { color: tickColor, stepSize: 1 },
+        suggestedMin: 0,
+      },
+    },
+  },
+});
+</script>
+{% endblock %}
