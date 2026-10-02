@@ -6,7 +6,7 @@
   <p style="margin-top:6px; font-size:13px;">Обзор работы транспортной компании в реальном времени</p>
 </div>
 
-<!-- Операционные метрики -->
+
 <section class="metrics">
   <div>
     <small>Всего заказов</small>
@@ -26,29 +26,29 @@
   </div>
 </section>
 
-<!-- Финансовые метрики -->
+
 <section class="metrics">
   <div style="border-top-color: #3fb950;">
     <small>Общий доход</small>
-    <span style="color:#3fb950; font-size:22px;">{{ "%.0f"|format(total_income) }} ₽</span>
+    <span style="color:#3fb950; font-size:22px;">{{ "%.0f"|format(total_income) }} {{ currency_symbol }}</span>
   </div>
   <div style="border-top-color:#d29922;">
     <small>Расходы на топливо</small>
-    <span style="color:#d29922; font-size:22px;">{{ "%.0f"|format(total_fuel) }} ₽</span>
+    <span style="color:#d29922; font-size:22px;">{{ "%.0f"|format(total_fuel) }} {{ currency_symbol }}</span>
   </div>
   <div>
     <small>Прочие расходы</small>
-    <span style="font-size:22px;">{{ "%.0f"|format(total_other) }} ₽</span>
+    <span style="font-size:22px;">{{ "%.0f"|format(total_other) }} {{ currency_symbol }}</span>
   </div>
   <div>
     <small>Чистая прибыль</small>
     <span style="font-size:22px; {% if total_profit >= 0 %}color:#3fb950{% else %}color:#f85149{% endif %}">
-      {{ "%.0f"|format(total_profit) }} ₽
+      {{ "%.0f"|format(total_profit) }} {{ currency_symbol }}
     </span>
   </div>
 </section>
 
-<!-- Быстрые действия -->
+
 <div class="quick-links">
   <a href="/admin/orders-intake/new">➕&nbsp; Новый заказ</a>
   <a href="/admin/orders-intake">📋&nbsp; Заказы клиентов</a>
@@ -58,7 +58,7 @@
   <a href="/admin/reports">📊&nbsp; Отчёты и аналитика</a>
 </div>
 
-<!-- Активные рейсы -->
+
 {% set active_orders = orders|selectattr("status.value","in",["в пути","назначен"])|list %}
 {% if active_orders %}
 <div class="table-card" style="margin-top:8px;">
@@ -74,8 +74,8 @@
           <th>Маршрут</th>
           <th>Грузовик</th>
           <th>Водитель</th>
-          <th>Доход, ₽</th>
-          <th>Прибыль, ₽</th>
+          <th>Доход, {{ currency_symbol }}</th>
+          <th>Прибыль, {{ currency_symbol }}</th>
           <th>Статус</th>
           <th>Отправка</th>
         </tr>

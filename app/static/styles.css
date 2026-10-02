@@ -1,8 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
-/* ═══════════════════════════════════════════
-   DESIGN TOKENS
-═══════════════════════════════════════════ */
+
 :root {
   --bg:          #0d1117;
   --bg-2:        #161b22;
@@ -33,9 +31,7 @@
   --topbar-h:    58px;
 }
 
-/* ═══════════════════════════════════════════
-   RESET
-═══════════════════════════════════════════ */
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{
@@ -54,9 +50,7 @@ a{color:inherit;text-decoration:none}
 ::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:99px}
 ::-webkit-scrollbar-thumb:hover{background:var(--text-3)}
 
-/* ═══════════════════════════════════════════
-   TOPBAR
-═══════════════════════════════════════════ */
+
 .topbar{
   position:sticky;top:0;z-index:100;
   display:flex;align-items:center;gap:10px;
@@ -95,7 +89,7 @@ a{color:inherit;text-decoration:none}
 }
 .brand strong{font-size:14px;font-weight:700;letter-spacing:-.3px}
 
-/* Горизонтальная навигация в topbar */
+
 .topbar-nav{
   display:flex;align-items:center;gap:2px;
   margin-right:auto;overflow:hidden;
@@ -120,9 +114,7 @@ a{color:inherit;text-decoration:none}
   padding:5px 13px;font-size:12px;font-weight:600;
 }
 
-/* ═══════════════════════════════════════════
-   DRAWER (JS-управляемый)
-═══════════════════════════════════════════ */
+
 .drawer-overlay{
   position:fixed;inset:0;z-index:200;
   background:rgba(0,0,0,.55);
@@ -130,7 +122,7 @@ a{color:inherit;text-decoration:none}
   opacity:0;pointer-events:none;
   transition:opacity .2s;
 }
-/* overlay видимый, но НЕ кликабельный для закрытия */
+
 .drawer-overlay.is-open{opacity:1;pointer-events:none}
 
 .drawer{
@@ -195,9 +187,7 @@ a{color:inherit;text-decoration:none}
   border-top:1px solid var(--border);
 }
 
-/* ═══════════════════════════════════════════
-   MAIN
-═══════════════════════════════════════════ */
+
 main{
   width:min(1360px,100%);
   margin:0 auto;
@@ -206,9 +196,7 @@ main{
 
 .admin-content{min-width:0}
 
-/* ═══════════════════════════════════════════
-   PAGE HEADING
-═══════════════════════════════════════════ */
+
 .page-heading{margin-bottom:24px}
 
 .eyebrow{
@@ -227,9 +215,7 @@ h1{font-size:clamp(22px,3.5vw,30px);font-weight:800;letter-spacing:-.5px;line-he
 h2{font-size:16px;font-weight:700;letter-spacing:-.2px}
 p{color:var(--text-2);line-height:1.6}
 
-/* ═══════════════════════════════════════════
-   METRICS
-═══════════════════════════════════════════ */
+
 .metrics{
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));
@@ -261,9 +247,7 @@ p{color:var(--text-2);line-height:1.6}
   text-transform:uppercase;letter-spacing:.5px;
 }
 
-/* ═══════════════════════════════════════════
-   QUICK LINKS
-═══════════════════════════════════════════ */
+
 .quick-links{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
@@ -283,9 +267,7 @@ p{color:var(--text-2);line-height:1.6}
   color:var(--text);transform:translateY(-1px);
 }
 
-/* ═══════════════════════════════════════════
-   TABLE CARD
-═══════════════════════════════════════════ */
+
 .table-card{
   overflow:hidden;
   background:var(--surface);
@@ -315,9 +297,7 @@ tbody tr{transition:background .12s}
 tbody tr:hover{background:rgba(47,129,247,.04)}
 td small{display:block;color:var(--text-3);font-size:11px;margin-top:2px}
 
-/* ═══════════════════════════════════════════
-   BADGE
-═══════════════════════════════════════════ */
+
 .badge{
   display:inline-flex;align-items:center;
   padding:3px 10px;border-radius:99px;
@@ -327,9 +307,7 @@ td small{display:block;color:var(--text-3);font-size:11px;margin-top:2px}
   border:1px solid rgba(163,113,247,.25);
 }
 
-/* ═══════════════════════════════════════════
-   BUTTONS
-═══════════════════════════════════════════ */
+
 button,.primary-button,.table-action,.primary-link{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
   padding:8px 16px;
@@ -354,9 +332,7 @@ button:active{transform:translateY(0)}
 }
 .secondary-button:hover{background:var(--bg-2);color:var(--text);box-shadow:none}
 
-/* ═══════════════════════════════════════════
-   FORMS
-═══════════════════════════════════════════ */
+
 .admin-form,.request-form,.inline-form{display:grid;gap:14px}
 .admin-form{
   grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
@@ -390,9 +366,7 @@ select{
   background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;
 }
 
-/* ═══════════════════════════════════════════
-   VEHICLE CARDS
-═══════════════════════════════════════════ */
+
 .vehicle-list{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
   gap:16px;margin-top:20px;
@@ -414,9 +388,7 @@ dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 dt{font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
 dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
 
-/* ═══════════════════════════════════════════
-   ALERTS
-═══════════════════════════════════════════ */
+
 .alert{
   padding:12px 16px;border-radius:var(--radius-md);
   background:var(--red-dim);border:1px solid rgba(248,81,73,.3);
@@ -436,14 +408,10 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
 }
 .back-link:hover{color:var(--accent)}
 
-/* ═══════════════════════════════════════════
-   REPORT GRID
-═══════════════════════════════════════════ */
+
 .report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px}
 
-/* ═══════════════════════════════════════════
-   ACTIONS IN TABLES
-═══════════════════════════════════════════ */
+
 .actions{display:flex;gap:6px;align-items:center}
 .actions form{margin:0}
 .actions button{padding:5px 10px;font-size:12px;min-height:28px}
@@ -451,9 +419,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
 .button-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .inline-form{display:grid;gap:10px}
 
-/* ═══════════════════════════════════════════
-   CHARTS
-═══════════════════════════════════════════ */
+
 .chart-card{
   background:var(--surface);border:1px solid var(--border);
   border-radius:var(--radius-lg);padding:20px;
@@ -476,7 +442,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
   background:var(--accent-dim);color:var(--accent);border-color:var(--accent);
 }
 
-/* Month filter buttons */
+
 .month-btn{
   display:inline-flex;align-items:center;
   padding:5px 12px;border-radius:99px;
@@ -487,7 +453,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
 .month-btn:hover{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
 .month-btn-active{background:var(--accent-dim)!important;color:var(--accent)!important;border-color:var(--accent)!important}
 
-/* Legend */
+
 .legend-row{
   display:flex;align-items:center;gap:8px;
   font-size:12px;color:var(--text-2);
@@ -497,9 +463,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
   border-radius:50%;flex-shrink:0;
 }
 
-/* ═══════════════════════════════════════════
-   MAP (leaflet)
-═══════════════════════════════════════════ */
+
 .map-field{display:grid;gap:10px}
 .map-actions{display:flex;flex-wrap:wrap;gap:8px}
 .map-actions button{background:var(--bg-3);color:var(--text-2);border-color:var(--border);font-size:12px}
@@ -513,9 +477,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
 .more-fields summary::-webkit-details-marker{display:none}
 .more-fields .form-grid{margin-top:14px}
 
-/* ═══════════════════════════════════════════
-   LOGIN
-═══════════════════════════════════════════ */
+
 .login-wrapper{
   min-height:100vh;display:grid;place-items:center;padding:20px;
   background:var(--bg);
@@ -536,9 +498,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
   box-shadow:var(--accent-glow);margin-bottom:24px;
 }
 
-/* ═══════════════════════════════════════════
-   MAP MARKERS + CONTROLS
-═══════════════════════════════════════════ */
+
 .rc-marker {
   width: 32px; height: 32px;
   display: grid; place-items: center;
@@ -550,7 +510,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
 }
 .rc-marker span { display: block; transform: rotate(45deg); }
 
-/* Leaflet dark theme overrides */
+
 .leaflet-container { background: #1c2128 !important; font-family: 'Inter', sans-serif; }
 .leaflet-popup-content-wrapper {
   background: #21262d; border: 1px solid var(--border);
@@ -580,7 +540,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
 }
 .leaflet-control-attribution a { color: var(--text-3) !important; }
 
-/* ─── Search control ─── */
+
 .rc-search-wrap {
   background: rgba(22,27,34,.96) !important;
   border: 1px solid var(--border) !important;
@@ -625,7 +585,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
 .rc-item-type { font-size: 10px; color: var(--text-3); background: var(--bg-3); padding: 1px 6px; border-radius: 99px; white-space: nowrap; flex-shrink: 0; }
 .rc-no-result { padding: 10px 14px; font-size: 12px; color: var(--text-3); }
 
-/* ─── Mode buttons (bottom-left) ─── */
+
 .rc-mode-wrap {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   background: rgba(22,27,34,.92) !important;
@@ -653,7 +613,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
   border-top: 1px solid var(--border);
 }
 
-/* ─── My location button ─── */
+
 .rc-loc-btn {
   width: 38px !important; height: 38px !important;
   background: rgba(22,27,34,.92) !important;
@@ -670,9 +630,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
   border-color: var(--accent) !important;
 }
 
-/* ═══════════════════════════════════════════
-   ASSIGN FORM
-═══════════════════════════════════════════ */
+
 .assign-form {
   display: grid; gap: 13px; padding: 16px;
   background: var(--bg-2); border: 1px solid var(--border);
@@ -684,66 +642,64 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
   font-weight: 600; text-transform: uppercase; letter-spacing: .4px;
 }
 
-/* ═══════════════════════════════════════════
-   RESPONSIVE — MOBILE FIRST
-═══════════════════════════════════════════ */
 
-/* ── Tablet ── */
+
+
 @media(max-width:1024px){
   .metrics{grid-template-columns:repeat(2,1fr)}
   .quick-links{grid-template-columns:repeat(2,1fr)}
   .topbar-nav{display:none}
 }
 
-/* ── Mobile ── */
+
 @media(max-width:768px){
   :root{ --topbar-h: 52px; }
 
-  /* Topbar */
+
   .topbar{padding:0 12px;gap:8px;}
   .brand strong{display:none}
   .profile-pill{font-size:11px;padding:4px 10px;}
 
-  /* Hide topbar-nav (drawer replaces it) */
+
   .topbar-nav{display:none!important}
 
-  /* Main content */
+
   main{padding:12px 10px 90px!important;}
   .page-heading h1{font-size:20px!important;}
 
-  /* Metric cards */
+
   .metrics{grid-template-columns:repeat(2,1fr);gap:10px}
   .metric-card{padding:14px 12px;}
   .metric-value{font-size:24px!important;}
 
-  /* Quick links / charts */
+
   .quick-links{grid-template-columns:repeat(2,1fr);gap:8px}
   .chart-card{padding:14px 12px;}
   .chart-title{font-size:13px!important;}
 
-  /* Tables: horizontal scroll */
+
   .table-wrap, .data-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   table{min-width:600px;}
   td, th{padding:10px 10px!important;font-size:12px!important;}
 
-  /* Forms */
+
   .form-grid{grid-template-columns:1fr!important;gap:12px}
   .form-row{flex-direction:column!important;gap:8px!important;}
-  input,select,textarea{font-size:16px!important;/* prevent iOS zoom */}
+  input,select,textarea{font-size:16px!important;}
 
-  /* Report grid */
+
   .report-grid{grid-template-columns:1fr}
 
-  /* Assign form */
+
   .assign-form{padding:12px;}
 
-  /* Alerts */
+
   .alert{font-size:13px;padding:10px 14px;}
 
-  /* Buttons */
+
   .primary-button,.secondary-button{width:100%;justify-content:center;padding:13px 16px;font-size:15px;}
 
-  /* ── Bottom Navigation Bar (mobile only) ── */
+
   .mob-nav{
     display:flex;
     position:fixed;bottom:0;left:0;right:0;z-index:150;
@@ -763,28 +719,28 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
   .mob-nav a .mn-icon{font-size:20px;line-height:1;}
   .mob-nav a.active,.mob-nav a:hover{color:var(--accent);}
 
-  /* Keep menu-button visible on mobile */
+
   .menu-button{display:grid!important;}
 
-  /* Login card — full width on mobile */
+
   .login-wrapper{padding:16px!important;}
   .login-card{padding:24px 18px!important;border-radius:14px!important;max-width:100%!important;}
 
-  /* Status progress steps — wrap on mobile */
+
   .status-steps{flex-wrap:wrap!important;gap:6px!important;}
 
-  /* Map height reduce on mobile */
+
   #route-map{height:260px!important;}
 
-  /* Back link */
+
   .back-link{display:inline-block;margin-bottom:12px!important;}
 
-  /* Two-column grids → single */
+
   [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important;}
   [style*="grid-template-columns: 1fr 1fr"]{grid-template-columns:1fr!important;}
 }
 
-/* ── Small phones ── */
+
 @media(max-width:400px){
   .metrics{grid-template-columns:1fr 1fr;gap:8px}
   .quick-links{grid-template-columns:1fr}
@@ -793,7 +749,7 @@ dd{margin:3px 0 0;font-size:14px;font-weight:700;color:var(--text)}
   .mob-nav a .mn-icon{font-size:18px;}
 }
 
-/* ── Hide mob-nav on desktop ── */
+
 @media(min-width:769px){
   .mob-nav{display:none!important;}
   main{padding-bottom:32px!important;}

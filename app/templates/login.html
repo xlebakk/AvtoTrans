@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
   <style>
-    /* Role selector */
+
     .role-tabs {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -39,11 +39,11 @@
     .role-tab .label { font-size: 13px; font-weight: 700; color: var(--text); }
     .role-tab .sub { font-size: 10px; color: var(--text-3); }
 
-    /* Panels */
+
     .panel { display: none; }
     .panel.active { display: grid; gap: 14px; }
 
-    /* Divider */
+
     .or-divider {
       display: flex; align-items: center; gap: 10px;
       color: var(--text-3); font-size: 11px; margin: 4px 0;
@@ -56,14 +56,14 @@
 <body>
 <div class="login-wrapper">
   <div class="login-card" style="max-width:420px;">
-    <!-- Логотип -->
+
     <div class="login-logo">АТ</div>
     <div style="margin-bottom:24px; text-align:center;">
       <h1 style="font-size:22px; margin-bottom:6px;">АвтоТранс</h1>
       <p style="font-size:12px; color:var(--text-3);">Система автоматизации грузоперевозок</p>
     </div>
 
-    <!-- Выбор роли -->
+
     <div class="role-tabs" id="role-tabs">
       <div class="role-tab active" data-role="admin" onclick="selectRole('admin')">
         <span class="icon">🛡️</span>
@@ -77,7 +77,7 @@
       </div>
     </div>
 
-    <!-- ── Панель Диспетчера ── -->
+
     <div class="panel active" id="panel-admin">
       <form action="/login" method="post" style="display:grid; gap:14px;">
         <label>
@@ -97,7 +97,7 @@
       </form>
     </div>
 
-    <!-- ── Панель Водителя ── -->
+
     <div class="panel" id="panel-driver">
       <form action="/driver/login" method="post" style="display:grid; gap:14px;">
         <label>
@@ -139,7 +139,7 @@ function selectRole(role) {
   if (first) setTimeout(function() { first.focus(); }, 50);
 }
 
-// Auto-select driver tab if came from error=driver
+
 {% if error == 'driver' %}
 selectRole('driver');
 {% endif %}

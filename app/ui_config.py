@@ -6,6 +6,17 @@ from pathlib import Path
 
 CONFIG_PATH = Path("app/ui_config.json")
 
+CURRENCIES: dict[str, dict] = {
+    "TJS": {"code": "TJS", "symbol": "с.", "name": "Таджикский сомони", "flag": "🇹🇯"},
+    "RUB": {"code": "RUB", "symbol": "₽",    "name": "Российский рубль",  "flag": "🇷🇺"},
+    "USD": {"code": "USD", "symbol": "$",    "name": "Доллар США",         "flag": "🇺🇸"},
+    "EUR": {"code": "EUR", "symbol": "€",    "name": "Евро",               "flag": "🇪🇺"},
+    "CNY": {"code": "CNY", "symbol": "¥",    "name": "Китайский юань",    "flag": "🇨🇳"},
+    "KZT": {"code": "KZT", "symbol": "₸",    "name": "Казахский тенге",   "flag": "🇰🇿"},
+    "UZS": {"code": "UZS", "symbol": "сўм",  "name": "Узбекский сум",     "flag": "🇺🇿"},
+    "KGS": {"code": "KGS", "symbol": "сом",   "name": "Киргизский сом",    "flag": "🇰🇬"},
+}
+
 DEFAULT_UI_CONFIG = {
     "client_badge": "Автоматизация транспортной компании",
     "client_title": "АвтоТранс",
@@ -13,6 +24,7 @@ DEFAULT_UI_CONFIG = {
     "sections_order": ["contacts", "cargo", "route"],
     "show_map": False,
     "model_mode": "dae",
+    "currency": "TJS",
 }
 
 
@@ -40,4 +52,15 @@ def normalize_sections_order(values: list[str]) -> list[str]:
         if value not in normalized:
             normalized.append(value)
     return normalized
+
+
+def get_currency_info(cfg: dict | None = None) -> dict:
+    if cfg is None:
+        cfg = load_ui_config()
+    code = cfg.get("currency", "TJS")
+    return CURRENCIES.get(code, CURRENCIES["TJS"])
+
+
+def get_currency_symbol(cfg: dict | None = None) -> str:
+    return get_currency_info(cfg)["symbol"]
 

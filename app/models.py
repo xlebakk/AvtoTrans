@@ -62,9 +62,7 @@ class Driver(Base):
     status: Mapped[DriverStatus] = mapped_column(
         Enum(DriverStatus, native_enum=False), default=DriverStatus.available, nullable=False
     )
-    # Портал водителя
     password: Mapped[str | None] = mapped_column(String(128), nullable=True)  # plain-text для MVP
-    # GPS-трекинг
     last_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     last_lon: Mapped[float | None] = mapped_column(Float, nullable=True)
     last_seen: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

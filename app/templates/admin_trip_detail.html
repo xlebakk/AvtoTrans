@@ -13,7 +13,7 @@
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
 
-  <!-- ── Маршрут + карта ── -->
+
   <div class="chart-card" style="grid-column:1/-1;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:12px;">
       <div>
@@ -44,14 +44,14 @@
       </div>
     </div>
 
-    <!-- GPS метка водителя -->
+
     <div id="driver-location-bar" style="display:none;background:var(--accent-dim);border:1px solid var(--accent);border-radius:var(--radius-sm);padding:8px 14px;margin-bottom:12px;font-size:12px;color:var(--accent);display:flex;align-items:center;gap:8px;">
       📡 <span id="driver-location-text">Определяем местоположение водителя…</span>
     </div>
 
     {% set editable = order.status.value in ['новый', 'назначен'] %}
 
-    <!-- Блок с блокировкой или кнопкой редактирования -->
+
     {% if not editable %}
     <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:10px;
                 background:rgba(48,54,61,.6);border:1px solid var(--border);border-radius:var(--radius-sm);
@@ -60,7 +60,7 @@
       <strong style="color:var(--text-2);">{{ order.status.value }}</strong>
     </div>
     {% else %}
-    <!-- Панель: рейс ещё не начат, кнопка включения редактирования -->
+
     <div id="edit-notice" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin-bottom:10px;
                 background:rgba(63,185,80,.06);border:1px solid rgba(63,185,80,.2);border-radius:var(--radius-sm);
                 font-size:12px;">
@@ -78,7 +78,7 @@
       </button>
     </div>
 
-    <!-- Панель режима редактирования: показывается после activateEditMap() -->
+
     <div id="editing-panel" style="display:none;padding:10px 14px;margin-bottom:10px;
                  background:rgba(210,153,34,.06);border:1px solid rgba(210,153,34,.25);border-radius:var(--radius-sm);">
       <div style="font-size:12px;color:var(--yellow);font-weight:700;margin-bottom:6px;">
@@ -103,7 +103,7 @@
     <div id="route-map" style="height:380px;border-radius:var(--radius-md);border:1px solid var(--border);overflow:hidden;"></div>
   </div>
 
-  <!-- ── Информация о грузе ── -->
+
   <div class="chart-card">
     <div class="chart-title" style="margin-bottom:14px;">📦 Груз и клиент</div>
     <dl style="display:grid;gap:10px;">
@@ -140,7 +140,7 @@
     </dl>
   </div>
 
-  <!-- ── Машина и водитель ── -->
+
   <div class="chart-card">
     <div class="chart-title" style="margin-bottom:14px;">🚛 Машина и водитель</div>
     <dl style="display:grid;gap:10px;">
@@ -171,7 +171,7 @@
     </dl>
   </div>
 
-  <!-- ── Финансы ── -->
+
   <div class="chart-card">
     <div class="chart-title" style="margin-bottom:14px;">💰 Финансы рейса</div>
     <dl style="display:grid;gap:10px;">
@@ -181,34 +181,34 @@
       </div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
         <dt style="color:var(--text-3);font-size:12px;">Тариф</dt>
-        <dd>{{ "%.0f"|format(order.vehicle.base_rate_per_km) }} ₽/км</dd>
+        <dd>{{ "%.0f"|format(order.vehicle.base_rate_per_km) }} {{ currency_symbol }}/км</dd>
       </div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
         <dt style="color:var(--text-3);font-size:12px;">Доход</dt>
-        <dd style="font-weight:800;font-size:16px;">{{ "%.0f"|format(order.final_price) }} ₽</dd>
+        <dd style="font-weight:800;font-size:16px;">{{ "%.0f"|format(order.final_price) }} {{ currency_symbol }}</dd>
       </div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
         <dt style="color:var(--text-3);font-size:12px;">Топливо</dt>
-        <dd style="color:#d29922;">−{{ "%.0f"|format(order.fuel_cost) }} ₽</dd>
+        <dd style="color:#d29922;">−{{ "%.0f"|format(order.fuel_cost) }} {{ currency_symbol }}</dd>
       </div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
         <dt style="color:var(--text-3);font-size:12px;">Прочие расходы</dt>
-        <dd style="color:var(--text-3);">−{{ "%.0f"|format(order.other_costs) }} ₽</dd>
+        <dd style="color:var(--text-3);">−{{ "%.0f"|format(order.other_costs) }} {{ currency_symbol }}</dd>
       </div>
       <div style="display:flex;justify-content:space-between;padding:10px 0;background:{% if order.profit >= 0 %}rgba(63,185,80,.06){% else %}rgba(248,81,73,.06){% endif %};border-radius:var(--radius-sm);padding:10px 12px;">
         <dt style="font-weight:700;">Прибыль</dt>
         <dd style="font-weight:800;font-size:18px;{% if order.profit >= 0 %}color:#3fb950{% else %}color:#f85149{% endif %}">
-          {{ "%.0f"|format(order.profit) }} ₽
+          {{ "%.0f"|format(order.profit) }} {{ currency_symbol }}
         </dd>
       </div>
     </dl>
   </div>
 
-  <!-- ── Статус и действия ── -->
+
   <div class="chart-card">
     <div class="chart-title" style="margin-bottom:14px;">⚡ Статус и действия</div>
 
-    <!-- Шкала прогресса -->
+
     <div style="margin-bottom:20px;">
       {% set steps = [("назначен", "Назначен"), ("подъехал", "Подъехал"), ("в пути", "В пути"), ("доставлен", "Доставлен")] %}
       {% set status_val = order.status.value %}
@@ -230,7 +230,7 @@
       </div>
     </div>
 
-    <!-- Кнопки действий -->
+
     <div style="display:grid;gap:8px;">
       {% if order.status.value in ["назначен", "новый"] %}
         <form action="/ui/orders/{{ order.id }}/start" method="post">
@@ -250,9 +250,7 @@
 
 </div>
 
-<!-- ══════════════════════════════════════
-     ЧАТ С ВОДИТЕЛЕМ
-══════════════════════════════════════ -->
+
 <div class="chart-card">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
     <div class="chart-title">💬 Чат с водителем</div>
@@ -284,26 +282,26 @@ var ORIGIN     = {{ order.cargo_request.origin | tojson }};
 var DEST       = {{ (order.cargo_request.destination or '') | tojson }};
 var DRIVER_ID  = {{ order.driver_id }};
 
-// ── Карта ──────────────────────────────
-// Карта всегда запускается в readonly-режиме.
-// Редактирование включается только после нажатия кнопки "Редактировать маршрут".
+
+
+
 var MAP_EDITABLE = {{ 'true' if order.status.value in ['новый', 'назначен'] else 'false' }};
 var _mapInEditMode = false;
 
 window.addEventListener('DOMContentLoaded', function () {
-  // ВСЕГДА запускаем в readonly — даже если статус позволяет редактирование
+
   RouteCalc.init({ mapId: 'route-map', origin: ORIGIN, dest: DEST, readonly: true });
 
-  // Начинаем опрос GPS водителя каждые 10 сек
+
   pollDriverLocation();
   setInterval(pollDriverLocation, 10000);
 
-  // Чат — первая загрузка
+
   loadChat();
   setInterval(loadChat, 4000);
 });
 
-// ── GPS водителя ───────────────────────
+
 var _driverMarker = null;
 
 function pollDriverLocation() {
@@ -337,7 +335,7 @@ function pollDriverLocation() {
     .catch(function() {});
 }
 
-// ── Чат ────────────────────────────────
+
 function loadChat() {
   fetch('/api/admin/chat/' + ORDER_ID)
     .then(function(r) { return r.json(); })
@@ -380,15 +378,15 @@ function activateEditMap() {
   if (_mapInEditMode || !MAP_EDITABLE) return;
   _mapInEditMode = true;
 
-  // Скрываем кнопку "Редактировать"
+
   var notice = document.getElementById('edit-notice');
   if (notice) notice.style.display = 'none';
 
-  // Показываем панель с прежними адресами
+
   var editPanel = document.getElementById('editing-panel');
   if (editPanel) editPanel.style.display = 'block';
 
-  // Включаем редактирование на карте
+
   RouteCalc.enableEdit();
 }
 

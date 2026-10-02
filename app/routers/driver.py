@@ -28,9 +28,6 @@ templates = Jinja2Templates(directory="app/templates")
 
 ACTIVE_STATUSES = (OrderStatus.assigned, OrderStatus.arrived, OrderStatus.in_transit)
 
-
-# ─── Auth helpers ──────────────────────────────────────────────────────────────
-
 def get_driver_id(request: Request) -> int | None:
     try:
         return int(request.cookies.get("driver_id", ""))
@@ -47,12 +44,9 @@ def require_driver(request: Request, db: Session) -> Driver | RedirectResponse:
         return RedirectResponse("/driver/login", status_code=303)
     return driver
 
-
-# ─── Login ─────────────────────────────────────────────────────────────────────
-
 @router.get("/driver/login", response_class=HTMLResponse)
 def driver_login_page(request: Request, error: str | None = None) -> Response:
-    # Redirect to unified login page
+
     return RedirectResponse("/login", status_code=302)
 
 
@@ -77,24 +71,17 @@ def driver_logout() -> RedirectResponse:
     resp.delete_cookie("driver_id")
     return resp
 
-
-# ─── Dashboard ─────────────────────────────────────────────────────────────────
-
 @router.get("/driver", response_class=HTMLResponse)
 def driver_dashboard(request: Request, db: Session = Depends(get_db)) -> Response:
     result = require_driver(request, db)
     if isinstance(result, RedirectResponse):
         return result
     driver = result
-
-    # Активный рейс
     active_order = db.scalar(
         select(Order)
         .where(Order.driver_id == driver.id, Order.status.in_(ACTIVE_STATUSES))
         .limit(1)
     )
-
-    # Статистика водителя — всегда загружаем
     all_orders = db.scalars(
         select(Order)
         .where(Order.driver_id == driver.id)
@@ -115,9 +102,6 @@ def driver_dashboard(request: Request, db: Session = Depends(get_db)) -> Respons
         "stat_fuel": round(total_fuel),
         "recent_orders": recent,
     })
-
-
-# ─── История ───────────────────────────────────────────────────────────────────
 
 @router.get("/driver/history", response_class=HTMLResponse)
 def driver_history(request: Request, db: Session = Depends(get_db)) -> Response:
@@ -144,9 +128,6 @@ def driver_history(request: Request, db: Session = Depends(get_db)) -> Response:
         "total_fuel": total_fuel,
         "total_trips": total_trips,
     })
-
-
-# ─── Изменить статус рейса ─────────────────────────────────────────────────────
 
 STATUS_MAP = {
     "arrived":    OrderStatus.arrived,
@@ -188,9 +169,6 @@ def driver_update_status(
 
     return RedirectResponse("/driver", status_code=303)
 
-
-# ─── GPS location update ───────────────────────────────────────────────────────
-
 @router.post("/api/driver/location")
 async def driver_update_location(request: Request, db: Session = Depends(get_db)) -> JSONResponse:
     did = get_driver_id(request)
@@ -207,9 +185,6 @@ async def driver_update_location(request: Request, db: Session = Depends(get_db)
     db.commit()
     return JSONResponse({"ok": True})
 
-
-# ─── Driver location for admin ─────────────────────────────────────────────────
-
 @router.get("/api/admin/driver-location/{driver_id}")
 def admin_get_driver_location(driver_id: int, db: Session = Depends(get_db)) -> JSONResponse:
     driver = db.get(Driver, driver_id)
@@ -223,9 +198,6 @@ def admin_get_driver_location(driver_id: int, db: Session = Depends(get_db)) -> 
         "name": driver.full_name,
     })
 
-
-# ─── Chat: driver side ─────────────────────────────────────────────────────────
-
 @router.get("/api/driver/chat/{order_id}")
 def driver_get_chat(order_id: int, request: Request, db: Session = Depends(get_db)) -> JSONResponse:
     did = get_driver_id(request)
@@ -236,7 +208,6 @@ def driver_get_chat(order_id: int, request: Request, db: Session = Depends(get_d
         .where(ChatMessage.order_id == order_id, ChatMessage.driver_id == did)
         .order_by(ChatMessage.created_at)
     ).all()
-    # Mark admin messages as read
     for m in msgs:
         if m.sender == "admin" and not m.is_read:
             m.is_read = True
@@ -261,9 +232,6 @@ async def driver_send_message(order_id: int, request: Request, db: Session = Dep
     db.commit()
     return JSONResponse({"ok": True, "id": msg.id})
 
-
-# ─── Chat: admin side ──────────────────────────────────────────────────────────
-
 @router.get("/api/admin/chat/{order_id}")
 def admin_get_chat(order_id: int, db: Session = Depends(get_db)) -> JSONResponse:
     order = db.get(Order, order_id)
@@ -274,7 +242,6 @@ def admin_get_chat(order_id: int, db: Session = Depends(get_db)) -> JSONResponse
         .where(ChatMessage.order_id == order_id)
         .order_by(ChatMessage.created_at)
     ).all()
-    # Mark driver messages as read by admin
     for m in msgs:
         if m.sender == "driver" and not m.is_read:
             m.is_read = True
@@ -300,18 +267,12 @@ async def admin_send_message(order_id: int, request: Request, db: Session = Depe
     db.commit()
     return JSONResponse({"ok": True, "id": msg.id})
 
-
-# ─── Unread count for admin notification ──────────────────────────────────────
-
 @router.get("/api/admin/chat-unread")
 def admin_unread_count(db: Session = Depends(get_db)) -> JSONResponse:
     msgs = db.scalars(
         select(ChatMessage).where(ChatMessage.sender == "driver", ChatMessage.is_read == False)
     ).all()
     return JSONResponse({"unread": len(msgs)})
-
-
-# ─── General Chat (без привязки к заказу) ──────────────────────────────────────
 
 @router.get("/api/driver/chat/general")
 def driver_get_general_chat(request: Request, db: Session = Depends(get_db)) -> JSONResponse:

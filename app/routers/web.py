@@ -15,7 +15,7 @@ from app.services.common import calculate_volume, get_or_404
 from app.services.matching import find_matching_vehicles
 from app.services.orders import complete_order, create_order, start_order
 from app.services.reports import income_by_clients, monthly_stats, trips_for_period, vehicle_utilization
-from app.ui_config import load_ui_config
+from app.ui_config import CURRENCIES, get_currency_info, load_ui_config, normalize_sections_order, save_ui_config
 
 router = APIRouter(tags=["web"])
 templates = Jinja2Templates(directory="app/templates")
@@ -42,6 +42,7 @@ def base_context(request: Request, title: str) -> dict:
         truck_model_url = "/static/models/model.dae"
     elif ui_config["model_mode"] == "glb" and glb_model.exists():
         truck_model_url = "/static/models/truck.glb"
+    currency = get_currency_info(ui_config)
     return {
         "is_admin": is_admin(request),
         "title": title,
@@ -49,6 +50,9 @@ def base_context(request: Request, title: str) -> dict:
         "truck_model_url": truck_model_url,
         "show_truck_viewer": ui_config["model_mode"] != "none",
         "ui_config": ui_config,
+        "currency_symbol": currency["symbol"],
+        "currency_code": currency["code"],
+        "currency_name": currency["name"],
     }
 
 
@@ -80,17 +84,11 @@ def admin_context(request: Request, db: Session, title: str) -> dict:
         "total_profit": total_profit,
     }
 
-
-# ─── Главная страница → дашборд ───────────────────────────────────────────────
-
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request) -> Response:
     if is_admin(request):
         return RedirectResponse("/admin", status_code=302)
     return RedirectResponse("/login", status_code=302)
-
-
-# ─── Авторизация ─────────────────────────────────────────────────────────────
 
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request) -> HTMLResponse:
@@ -118,18 +116,12 @@ def logout() -> RedirectResponse:
     response.delete_cookie("admin_mode")
     return response
 
-
-# ─── Дашборд ─────────────────────────────────────────────────────────────────
-
 @router.get("/admin", response_class=HTMLResponse)
 def admin_dashboard(request: Request, db: Session = Depends(get_db)) -> Response:
     redirect = require_admin(request)
     if redirect:
         return redirect
     return templates.TemplateResponse(request, "admin_dashboard.html", admin_context(request, db, "Панель управления"))
-
-
-# ─── Заказы клиентов (бывшие Заявки) ─────────────────────────────────────────
 
 @router.get("/admin/orders-intake", response_class=HTMLResponse)
 def admin_orders_intake(request: Request, db: Session = Depends(get_db)) -> Response:
@@ -215,9 +207,6 @@ def admin_request_match(
         },
     )
 
-
-# ─── Рейсы ────────────────────────────────────────────────────────────────────
-
 @router.get("/admin/trips", response_class=HTMLResponse)
 def admin_trips(request: Request, db: Session = Depends(get_db)) -> Response:
     redirect = require_admin(request)
@@ -255,18 +244,12 @@ def admin_set_driver_password(
         db.commit()
     return RedirectResponse(f"/admin/drivers", status_code=303)
 
-
-# ─── Автопарк / Грузовики ─────────────────────────────────────────────────────
-
 @router.get("/admin/fleet", response_class=HTMLResponse)
 def admin_fleet(request: Request, db: Session = Depends(get_db)) -> Response:
     redirect = require_admin(request)
     if redirect:
         return redirect
     return templates.TemplateResponse(request, "admin_fleet.html", admin_context(request, db, "Грузовики"))
-
-
-# ─── Водители ─────────────────────────────────────────────────────────────────
 
 @router.get("/admin/drivers", response_class=HTMLResponse)
 def admin_drivers(request: Request, db: Session = Depends(get_db)) -> Response:
@@ -275,18 +258,12 @@ def admin_drivers(request: Request, db: Session = Depends(get_db)) -> Response:
         return redirect
     return templates.TemplateResponse(request, "admin_drivers.html", admin_context(request, db, "Водители"))
 
-
-# ─── Клиенты ─────────────────────────────────────────────────────────────────
-
 @router.get("/admin/clients", response_class=HTMLResponse)
 def admin_clients(request: Request, db: Session = Depends(get_db)) -> Response:
     redirect = require_admin(request)
     if redirect:
         return redirect
     return templates.TemplateResponse(request, "admin_clients.html", admin_context(request, db, "Клиенты"))
-
-
-# ─── Отчёты ───────────────────────────────────────────────────────────────────
 
 @router.get("/admin/reports", response_class=HTMLResponse)
 def admin_reports(request: Request, month: str | None = None, db: Session = Depends(get_db)) -> Response:
@@ -297,7 +274,6 @@ def admin_reports(request: Request, month: str | None = None, db: Session = Depe
     stats = monthly_stats(db)
     ctx["monthly_stats"] = stats
     ctx["selected_month"] = month
-    # Фильтрация рейсов по выбранному месяцу
     if month and len(month) == 7:
         try:
             y, m = map(int, month.split("-"))
@@ -310,9 +286,6 @@ def admin_reports(request: Request, month: str | None = None, db: Session = Depe
     else:
         ctx["filtered_trips"] = ctx["trips"]
     return templates.TemplateResponse(request, "admin_reports.html", ctx)
-
-
-# ─── CRUD через формы ─────────────────────────────────────────────────────────
 
 @router.post("/ui/clients")
 def create_client_ui(
@@ -440,3 +413,37 @@ def complete_order_ui(order_id: int, request: Request, db: Session = Depends(get
         return redirect
     complete_order(db, order_id)
     return RedirectResponse("/admin/trips", status_code=303)
+
+
+@router.get("/admin/settings", response_class=HTMLResponse)
+def settings_page(request: Request) -> Response:
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+    cfg = load_ui_config()
+    ctx = base_context(request, "Настройки")
+    ctx["cfg"] = cfg
+    ctx["currencies"] = CURRENCIES
+    ctx["saved"] = request.query_params.get("saved") == "1"
+    return templates.TemplateResponse(request, "settings.html", ctx)
+
+
+@router.post("/admin/settings")
+def settings_save(
+    request: Request,
+    currency: str = Form(default="TJS"),
+    client_title: str = Form(default="АвтоТранс"),
+    client_badge: str = Form(default="Автоматизация транспортной компании"),
+    model_mode: str = Form(default="none"),
+) -> RedirectResponse:
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+    from app.ui_config import CURRENCIES, normalize_sections_order
+    cfg = load_ui_config()
+    cfg["currency"] = currency if currency in CURRENCIES else "TJS"
+    cfg["client_title"] = client_title.strip() or "АвтоТранс"
+    cfg["client_badge"] = client_badge.strip()
+    cfg["model_mode"] = model_mode if model_mode in ("dae", "glb", "none") else "none"
+    save_ui_config(cfg)
+    return RedirectResponse("/admin/settings?saved=1", status_code=303)

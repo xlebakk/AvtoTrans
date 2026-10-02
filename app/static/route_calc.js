@@ -1,28 +1,19 @@
-/**
- * RouteCalc v3 — Full interactive map navigator
- *
- * Features:
- *  - Click map to place origin (A) / destination (B) markers
- *  - Address search with Nominatim autocomplete dropdown
- *  - "My Location" button (browser Geolocation)
- *  - OSRM route calculation + route line on map
- *  - Auto mode-switch (A → B → recalculate)
- */
+
 (function (global) {
   'use strict';
 
-  /* ══════════════════ STATE ══════════════════════════════════ */
+
   var _map        = null;
   var _routeLayer = null;
   var _markerA    = null;
   var _markerB    = null;
-  var _coordA     = null;    // { lat, lon, label }
+  var _coordA     = null;
   var _coordB     = null;
-  var _mode       = 'A';     // 'A' | 'B'
+  var _mode       = 'A';
   var _opts       = {};
-  var _sTmr       = null;    // search debounce timer
+  var _sTmr       = null;
 
-  /* ══════════════════ ICONS ══════════════════════════════════ */
+
   function mkIcon(letter, color) {
     return L.divIcon({
       html: '<div class="rc-marker" style="background:' + color + '">' + letter + '</div>',
@@ -32,7 +23,7 @@
     });
   }
 
-  /* ══════════════════ GEOCODING ══════════════════════════════ */
+
   async function geocode(address) {
     var url = 'https://nominatim.openstreetmap.org/search?' +
       'q=' + encodeURIComponent(address) +
@@ -59,7 +50,7 @@
     return d.display_name.split(',').slice(0, 2).join(', ').trim();
   }
 
-  /* ══════════════════ ROUTING ════════════════════════════════ */
+
   async function getRoute(a, b) {
     var url = 'https://router.project-osrm.org/route/v1/driving/' +
       a.lon + ',' + a.lat + ';' + b.lon + ',' + b.lat +
@@ -82,7 +73,7 @@
     return '~' + m + ' мин';
   }
 
-  /* ══════════════════ MARKERS ════════════════════════════════ */
+
   function placeA(coord) {
     if (_markerA) _map.removeLayer(_markerA);
     _coordA = coord;
@@ -131,7 +122,7 @@
     if (el && label) el.value = shortLabel(label);
   }
 
-  /* ══════════════════ ROUTE ══════════════════════════════════ */
+
   async function calcRoute() {
     if (!_coordA || !_coordB) {
       setStatus('Укажите обе точки на карте', '#f85149');
@@ -141,7 +132,7 @@
     try {
       var route = await getRoute(_coordA, _coordB);
 
-      // Draw line
+
       if (_routeLayer) _map.removeLayer(_routeLayer);
       _routeLayer = L.geoJSON(route.geojson, {
         style: { color: '#2f81f7', weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
@@ -151,17 +142,17 @@
         .extend([_coordB.lat, _coordB.lon]);
       _map.fitBounds(bounds, { padding: [60, 60], maxZoom: 12 });
 
-      // Update UI
+
       var badge = document.getElementById('route-distance-badge');
       var dur   = document.getElementById('route-duration');
       if (badge) badge.textContent = route.distance_km + ' км';
       if (dur)   dur.textContent   = fmtDur(route.duration_min);
       setStatus('Маршрут: ' + route.distance_km + ' км · ' + fmtDur(route.duration_min), '#3fb950');
 
-      // Fill all distance inputs in the forms
+
       document.querySelectorAll('[name="distance_km"]').forEach(function (inp) {
         if (!inp.value || inp.value === '0') inp.value = route.distance_km;
-        else inp.value = route.distance_km;   // always update with real data
+        else inp.value = route.distance_km;
       });
       return route;
     } catch (e) {
@@ -175,7 +166,7 @@
     if (el) { el.textContent = msg; el.style.color = color || 'var(--text-3)'; }
   }
 
-  /* ══════════════════ MODE ═══════════════════════════════════ */
+
   function setMode(m) {
     _mode = m;
     var btnA = document.getElementById('rc-btn-a');
@@ -191,7 +182,7 @@
     if (_map) _map.getContainer().style.cursor = 'crosshair';
   }
 
-  /* ══════════════════ SEARCH CONTROL ════════════════════════ */
+
   var SearchCtrl = L.Control.extend({
     options: { position: 'topleft' },
     onAdd: function () {
@@ -209,7 +200,7 @@
     },
   });
 
-  /* ══════════════════ MODE CONTROL ═══════════════════════════ */
+
   var ModeCtrl = L.Control.extend({
     options: { position: 'bottomleft' },
     onAdd: function () {
@@ -223,7 +214,7 @@
     },
   });
 
-  /* ══════════════════ MY LOCATION CONTROL ═══════════════════ */
+
   var LocCtrl = L.Control.extend({
     options: { position: 'topright' },
     onAdd: function () {
@@ -238,7 +229,7 @@
     },
   });
 
-  /* ══════════════════ GEOLOCATION ════════════════════════════ */
+
   function myLocation() {
     if (!navigator.geolocation) {
       setStatus('Браузер не поддерживает геолокацию', '#f85149');
@@ -277,7 +268,7 @@
     );
   }
 
-  /* ══════════════════ BIND SEARCH ════════════════════════════ */
+
   function bindSearch() {
     var inp = document.getElementById('rc-search-inp');
     var res = document.getElementById('rc-search-res');
@@ -298,7 +289,7 @@
 
     if (clr) clr.addEventListener('click', function () { inp.value = ''; res.innerHTML = ''; });
 
-    // Close on outside click
+
     document.addEventListener('click', function (e) {
       var wrap = document.querySelector('.rc-search-wrap');
       if (wrap && !wrap.contains(e.target)) res.innerHTML = '';
@@ -352,7 +343,7 @@
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  /* ════════════════════ INIT ═══════════════════════ */
+
   function init(opts) {
     _opts = opts || {};
     var containerId = _opts.mapId || 'route-map';
@@ -367,18 +358,18 @@
       maxZoom: 19,
     }).addTo(_map);
 
-    // Always add zoom
+
     L.control.zoom({ position: 'bottomright' }).addTo(_map);
 
-    // Location button always
+
     new LocCtrl().addTo(_map);
 
     if (!readOnly) {
-      // Interactive controls
+
       new SearchCtrl().addTo(_map);
       new ModeCtrl().addTo(_map);
 
-      // Bind after DOM update
+
       setTimeout(function () {
         bindSearch();
         var btnA = document.getElementById('rc-btn-a');
@@ -388,7 +379,7 @@
         setMode('A');
       }, 0);
 
-      // Map click → place marker
+
       _map.on('click', function (e) {
         var lat = e.latlng.lat, lon = e.latlng.lng;
         setStatus('Определяем адрес точки…', '#d29922');
@@ -408,7 +399,7 @@
         });
       });
 
-      // Also bind Enter on origin/dest inputs to geocode + place
+
       ['inp-origin', 'inp-dest'].forEach(function (id) {
         var el = document.getElementById(id);
         if (!el) return;
@@ -426,11 +417,11 @@
         });
       });
     } else {
-      // Readonly: show lock hint
+
       _map.getContainer().style.cursor = 'default';
     }
 
-    // Auto-route from initial addresses
+
     var origin = _opts.origin || '';
     var dest   = _opts.dest   || '';
     if (origin && dest) {
@@ -449,11 +440,11 @@
     }
   }
 
-  /* Switch existing map from readonly to editable (called by admin "Edit" button) */
+
   function enableEdit() {
     if (!_map) return;
     _map.getContainer().style.cursor = 'crosshair';
-    // Add controls if not present
+
     if (!document.getElementById('rc-search-inp')) new SearchCtrl().addTo(_map);
     if (!document.getElementById('rc-btn-a'))      new ModeCtrl().addTo(_map);
     setTimeout(function () {
@@ -473,13 +464,13 @@
         else               { placeB(coord); setMode('A'); if (_coordA) calcRoute(); }
       });
     });
-    // Make existing markers draggable
+
     if (_markerA) _markerA.dragging && _markerA.dragging.enable();
     if (_markerB) _markerB.dragging && _markerB.dragging.enable();
     setStatus('Режим редактирования включён. Кликните по карте для изменения маршрута.', '#2f81f7');
   }
 
-  /* ════════════════════ PUBLIC API ═════════════════════ */
+
   global.RouteCalc = {
     init: init,
     enableEdit: enableEdit,
@@ -489,7 +480,7 @@
     setMode: setMode,
     get map() { return _map; },
 
-    // Legacy compat: used in admin_request_match.html recalc button
+
     recalcFromInputs: function () {
       var a = (document.getElementById('inp-origin') || {}).value || '';
       var b = (document.getElementById('inp-dest')   || {}).value || '';

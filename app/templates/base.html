@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
 </head>
 <body>
-  <!-- ── Topbar ─────────────────────────────────────────────── -->
+
   <header class="topbar">
     <button class="menu-button" id="nav-toggle" aria-label="Меню" type="button">☰</button>
     <a class="brand" href="/admin">
@@ -33,7 +33,7 @@
     <div class="profile-pill">{{ "Диспетчер" if is_admin else "Гость" }}</div>
   </header>
 
-  <!-- ── Drawer (боковое меню) ─────────────────────────────── -->
+
   <div class="drawer-overlay" id="drawer-overlay"></div>
   <aside class="drawer" id="nav-drawer">
     <div class="drawer-header">
@@ -56,6 +56,7 @@
         <a href="/admin/drivers">👷 Водители</a>
         <a href="/admin/clients">🏢 Клиенты</a>
         <a href="/admin/reports">📊 Отчёты</a>
+        <a href="/admin/settings">⚙️ Настройки</a>
       {% endif %}
     </nav>
 
@@ -66,7 +67,7 @@
     {% endif %}
   </aside>
 
-  <!-- ── Main ──────────────────────────────────────────────── -->
+
   <main>
     {% if error %}
       <div class="alert">{{ error }}</div>
@@ -74,7 +75,7 @@
     {% block content %}{% endblock %}
   </main>
 
-  <!-- ── Нижняя навигация (только мобильные) ──────────────── -->
+
   {% if is_admin %}
   <nav class="mob-nav" id="mob-nav">
     <a href="/admin"               data-path="/admin"               id="mn-dash">
@@ -105,7 +106,7 @@
   <script type="module" src="{{ url_for('static', path='/truck3d.js') }}"></script>
   {% block extra_scripts %}{% endblock %}
   <script>
-  // ── Drawer: открыть/закрыть только через кнопки ─────────────────
+
   (function() {
     var toggle  = document.getElementById('nav-toggle');
     var close   = document.getElementById('nav-close');
@@ -125,10 +126,10 @@
 
     if (toggle)  toggle.addEventListener('click', openDrawer);
     if (close)   close.addEventListener('click', closeDrawer);
-    // Клик по оверлею НЕ закрывает — пользователь должен сам нажать ✕ или ☰
+
   })();
 
-  // ── Подсветка активной ссылки в topbar и mob-nav ────────────────
+
   (function() {
     var path = window.location.pathname;
     document.querySelectorAll('.topbar-link, .drawer-nav a, .mob-nav a').forEach(function(a) {
@@ -140,7 +141,7 @@
     });
   })();
 
-  // ── Автоматическое окрашивание бейджей статусов ─────────────────
+
   document.querySelectorAll('.badge').forEach(function(el) {
     var t = el.textContent.trim();
     var styles = {

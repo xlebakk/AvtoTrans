@@ -8,5 +8,6 @@
     "route"
   ],
   "show_map": false,
-  "model_mode": "dae"
+  "model_mode": "dae",
+  "currency": "TJS"
 }

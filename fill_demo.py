@@ -18,15 +18,12 @@ Base.metadata.create_all(bind=engine)
 
 def run():
     with SessionLocal() as db:
-        # Очистим существующие данные (кроме машин и водителей — они уже есть)
         db.query(Order).delete()
         db.query(CargoRequest).delete()
         db.query(Driver).delete()
         db.query(Client).delete()
         db.query(Vehicle).delete()
         db.commit()
-
-        # ── Машины ─────────────────────────────────────────────────
         vehicles = [
             Vehicle(plate_number="А123ВС77", brand="ГАЗон Next", length_m=5.1, width_m=2.1,
                     height_m=2.2, volume_cubic_m=23.5, capacity_kg=5000,
@@ -51,8 +48,6 @@ def run():
         ]
         db.add_all(vehicles)
         db.flush()
-
-        # ── Водители ───────────────────────────────────────────────
         drivers = [
             Driver(full_name="Иван Петров", license_category="C, E", experience_years=9,
                    assigned_vehicle_id=vehicles[0].id, status=DriverStatus.available),
@@ -69,8 +64,6 @@ def run():
         ]
         db.add_all(drivers)
         db.flush()
-
-        # ── Клиенты ────────────────────────────────────────────────
         clients = [
             Client(name="ООО СеверЛогистик", contacts="+7 900 100-20-30, order@sever.ru"),
             Client(name="ИП Каримов Б.Т.", contacts="+7 701 111-22-33"),
@@ -81,10 +74,7 @@ def run():
         ]
         db.add_all(clients)
         db.flush()
-
-        # ── Заявки на перевозку (CargoRequest) ───────────────────
         requests_data = [
-            # (client, cargo_name, features, weight_kg, volume, origin, dest)
             (clients[0], "Стальные трубы", "Металл, тяжёлое", 18000, 62.0, "Москва, склад №3", "Екатеринбург, завод", -33),
             (clients[1], "Бытовая техника", "Хрупкое, срочное", 4200, 20.0, "Алматы, ТЦ Мега", "Нур-Султан, ул. Абая 5", -55),
             (clients[2], "Продукты питания", "Скоропорт, охлаждение", 8500, 42.0, "Алматы, рынок Алтын", "Шымкент, ул. Рыскулова", -40),
@@ -110,8 +100,6 @@ def run():
             db.add(cr)
             cargo_requests.append(cr)
         db.flush()
-
-        # ── Рейсы (Orders) ────────────────────────────────────────
         def make_order(cr, vehicle, driver, dist_km, other_costs, status, dep_days, del_days=None):
             final_price = round(dist_km * vehicle.base_rate_per_km, 2)
             fuel_cost = round(dist_km * vehicle.fuel_consumption_per_100km / 100 * vehicle.fuel_price_per_liter, 2)
@@ -134,21 +122,16 @@ def run():
             )
 
         orders = [
-            # Завершённые рейсы
             make_order(cargo_requests[0], vehicles[2], drivers[2], 1850, 8500, OrderStatus.delivered, -33, -30),
             make_order(cargo_requests[1], vehicles[0], drivers[0], 1200, 3200, OrderStatus.delivered, -55, -53),
             make_order(cargo_requests[2], vehicles[1], drivers[1], 680,  4100, OrderStatus.delivered, -40, -39),
             make_order(cargo_requests[3], vehicles[2], drivers[2], 1420, 6200, OrderStatus.delivered, -60, -57),
             make_order(cargo_requests[4], vehicles[3], drivers[3], 420,  2800, OrderStatus.delivered, -20, -19),
             make_order(cargo_requests[5], vehicles[0], drivers[0], 510,  3100, OrderStatus.delivered, -10, -9),
-            # В пути
             make_order(cargo_requests[6], vehicles[2], drivers[2], 710,  4500, OrderStatus.in_transit, -2),
-            # Назначен
             make_order(cargo_requests[7], vehicles[1], drivers[1], 3200, 9800, OrderStatus.assigned, 1),
         ]
         db.add_all(orders)
-
-        # Обновим статусы машин и водителей по активным рейсам
         vehicles[2].status = VehicleStatus.in_trip
         drivers[2].status = DriverStatus.in_trip
         vehicles[1].status = VehicleStatus.in_trip
